@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Public Directory Exposure on Government Website — TushN101{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+{% block content %}
+
+<article class="piece">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <p class="piece-hero__eyebrow">Vulnerability Research · phdcci.in</p>
+        <h1 class="piece-hero__title">Public Directory Exposure on Government Website</h1>
+        <p class="piece-hero__deck">How an open /emarketplace/ directory on phdcci.in led to a downloadable WordPress backup with database credentials inside.</p>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <h2>Target</h2>
+    <p>
+        <strong>Website:</strong> <code>https://phdcci.in</code><br>
+        <strong>Vulnerable URL:</strong> <code>https://phdcci.in/emarketplace/</code>
+    </p>
+
+    <h2>Discovery</h2>
+    <p>
+        While conducting security research using search engine indexing queries, I discovered that the
+        <code>/emarketplace/</code> directory on <code>phdcci.in</code> had directory listing enabled.
+        The directory contents were publicly browsable, indexed by search engines, and accessible without authentication.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post5/directory_listing.png" alt="Directory listing of /emarketplace/">
+        <figcaption>Figure 1 — Public directory listing exposing files without authentication</figcaption>
+    </figure>
+
+    <p>
+        Under normal server operation, standalone PHP files like <code>wp-config.php</code> execute server-side
+        and do not display source code in response to browser requests. However, residing within the open directory
+        was a compressed archive: <code>custom (2).zip</code>.
+    </p>
+    <p>
+        Downloading and inspecting the archive revealed a full backup of the WordPress installation.
+        Because the archive contained raw source files, configuration files could be inspected directly in plaintext
+        without server execution.
+    </p>
+
+    <h2>Steps to Reproduce</h2>
+    <ol>
+        <li>Navigate to <code>https://phdcci.in/emarketplace/</code> — a full directory listing is returned without authentication.</li>
+        <li>Locate and download the backup archive <code>custom (2).zip</code>.</li>
+        <li>Extract the archive locally.</li>
+        <li>Inspect <code>wp-config.php</code> in a text editor.</li>
+    </ol>
+
+    <figure class="post-figure">
+        <img src="/static/post5/file_explorer.png" alt="File explorer showing extracted ZIP contents">
+        <figcaption>Figure 2 — Extracted archive contents revealing local WordPress source</figcaption>
+    </figure>
+
+    <p>
+        The configuration file contained plaintext database credentials, host information, and WordPress
+        cryptographic authentication salts, representing a severe information disclosure vulnerability.
+    </p>
+
+    <h2>Exposed Configuration</h2>
+
+    <pre><code>define( 'DB_NAME', 'sptherbalindia_emarket' );
+define( 'DB_USER', 'sptherbalindia_emarket' );
+define( 'DB_PASSWORD', '=C31f)GVkzXXXX' );
+define( 'DB_HOST', 'localhost' );
+define( 'DB_CHARSET', 'utf8mb4' );
+
+define( 'AUTH_KEY',         'hB`[u4[e$Crh|Yx^y{C-h=_WCQl~BS$<_F|0>X>YjPU?Dj/orj# tMi{35k|7_XXXX' );
+define( 'SECURE_AUTH_KEY',  '}TsJKFVyc]y&rmm;BR)dce)|}QpFS*~h}b#b?!(fqcE@/Ia)a|BSSxUb&$^XXXX' );
+define( 'LOGGED_IN_KEY',    ',=Ue}%TB{_ip&X`HZj^gg_C=luOnY6f~I@!Q@d#5DPAe_=+:n7T_Gi{ME5XXXX' );
+define( 'NONCE_KEY',        'J{}@&p.B9V9<A;%L:ww~RyvQ5;UY)0]*!f(26}Z7jeRSRofmpPG@,10]w!rXXXX' );
+define( 'AUTH_SALT',        '%|s2P?c:B{8fRF$]H:h%$Zp8w,?OR@:Lt9wtF[`T_O7fU/_>&}.Q,gFT_>uXXXX' );
+define( 'SECURE_AUTH_SALT', 'uvzL3vD,LU.Gs/|&cD4jxIZ:s@rqPs*7]i%(`hSP0K37z*X}cyCC$C)G#B{XXXX' );
+define( 'LOGGED_IN_SALT',   'Bge<GAn3iKNYOKP|M!R2&kd}+DdR;C;&zATD0*o.wDup+w=lUF;93(WuB+{XXXX' );
+define( 'NONCE_SALT',       '(#VC&.X@5R.=?8TbLU$CG^7G$mBl(+5Q~0CU(t+&EqqVpfIO1MTnE<K4O1_XXXX' );</code></pre>
+
+    <p class="post-note"><strong>Note:</strong> All credentials and authentication salts above have been partially redacted.</p>
+
+    <h2>Disclosure &amp; Response</h2>
+
+    <figure class="post-figure">
+        <img src="/static/post5/response.png" alt="CERT-In response email">
+        <figcaption>CERT-In acknowledgement</figcaption>
+    </figure>
+
+    <p>
+        The vulnerability was formally reported to CERT-In. Following the disclosure, CERT-In coordinated with the
+        site administrators, who promptly remediated the issue by disabling directory listing on the web server and
+        removing the exposed backup archive. In accordance with responsible disclosure protocols, all downloaded
+        testing files were securely erased.
+    </p>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">← Index</a>
+    </footer>
+    </div>
+    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
+        <p class="piece-rail__label">On this page</p>
+        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
+    </aside>
+    </div>
+</article>
+
+{% endblock %}

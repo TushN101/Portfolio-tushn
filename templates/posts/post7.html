@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Master API Key Exposure: Infrastructure-Wide Compromise — TushN101{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+{% block content %}
+
+<article class="piece">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <p class="piece-hero__eyebrow">March 31, 2026 · Broken Authentication &amp; Mass Assignment</p>
+        <h1 class="piece-hero__title">Master API Key Exposure: Infrastructure-Wide Compromise</h1>
+        <p class="piece-hero__deck">Discovery of an exposed super-admin API key in client-side requests, enabling administrative access to user PII, credentials, and storefront configurations.</p>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <div class="post-note">
+        <p><strong>Disclaimer:</strong> The API key shown in the screenshots and blog post has since been rotated and is included solely for demonstration and educational purposes.</p>
+    </div>
+
+    <p>
+        We begin with the main landing page of <strong>qobo.dev</strong>. At first glance, it appears to be a standard 
+        WhatsApp-to-Website builder, but examining the client-side communication reveals significant architectural weaknesses.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/qobo_home_page.png" alt="Qobo.dev Landing Page">
+    </figure>
+
+    <h2>1. Enumeration and Subdomain Discovery</h2>
+    <p>
+        I started with initial reconnaissance to map out the infrastructure. The results revealed several internal 
+        and client-facing subdomains that expanded the assessment surface.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/qobo_subdomain_list.png" alt="Infrastructure Subdomain List">
+        <figcaption>Subdomain enumeration revealing API, deployment, and client routes.</figcaption>
+    </figure>
+
+    <h3>Testing the Infrastructure</h3>
+    <p><strong>testing.qobo.dev</strong></p>
+    <p>
+        This route was publicly accessible. It serves as a dynamic project link generator, 
+        allowing subdomains to be provisioned on demand.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/qobo_domaingenerator_image.png" alt="Dynamic Project Link Generator">
+    </figure>
+
+    <p>
+        By entering an arbitrary project string (for example, "test-demo"), the system allows the creation of a persistent subdomain 
+        (<code>test-demo.testing.qobo.dev</code>) without authentication. Unauthenticated subdomain provisioning represents a configuration weakness that warrants stricter access controls.
+    </p>
+
+    <p><strong>swaadhome.qobo.dev</strong></p>
+    <p>
+        This subdomain hosts a live production site built for a client business—Anjali Mehta's homemade snacks.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/swaad_website_homepage.png" alt="Client Production Site">
+    </figure>
+
+    <h2>2. Intercepting the Master API Key</h2>
+    <p>
+        While reviewing network requests on the client site, I intercepted a background call to <code>/api/v1/product_rates</code>. 
+        While fetching product catalog details is standard application behavior, inspecting the request headers revealed a critical vulnerability:
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/intercept_menu_request.png" alt="Intercepting Backend Request">
+    </figure>
+
+    <p>The <code>X-API-KEY</code> header was being sent directly in client-side browser requests:</p>
+    <div class="code-block">
+        <pre><code>X-API-KEY: qobo_fb9194b6-bb10-40cc-94a3-9b30c1f96544_ae27882edbdf2204f94976ac968bc81a</code></pre>
+    </div>
+
+    <figure class="post-figure">
+        <img src="/static/post7/image_with_apikey.png" alt="Leaked API Key in Headers">
+    </figure>
+
+    <h2>3. Excessive Privileges and Administrative Endpoint Access</h2>
+    <p>
+        Reviewing the API route definitions within the client bundle revealed that this key was not scoped strictly for read-only pricing data. Instead, it operated as a master administrative key with permissions spanning user management, site configurations, and order processing.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/image_showing_possibleapiroutes.png" alt="Exposed API Routes">
+    </figure>
+
+    <h3>User Data Exposure</h3>
+    <p>
+        Supplying this key to the <code>/api/v1/users</code> endpoint returned the complete user database, including names, contact numbers, email addresses, stored passwords, and session tokens.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/fetching_all_users_viakey.png" alt="Exposed User Database">
+    </figure>
+
+    <p>
+        Similarly, querying the order endpoints exposed sensitive customer delivery addresses and financial transaction details.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/fetching_all_orders_viakey.png" alt="Exposed Order History">
+    </figure>
+
+    <p>
+        Furthermore, administrative access extended to payment configurations. An unauthorized party possessing these credentials could modify merchant payment details (such as UPI IDs or QR codes), posing significant financial integrity risks to businesses hosted on the platform.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/fetching_payement_settings.png" alt="Payment Settings Exposure">
+    </figure>
+
+    <h2>4. Proof of Concept: Rate Modification</h2>
+    <p>
+        To verify whether the exposed key permitted state-changing operations, a test request was made to modify the rate of a sample item ("Fried Modak", originally ₹25.00).
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/modak_price_orignal.png" alt="Original Product Price">
+    </figure>
+
+    <p>A <code>PUT</code> request using the intercepted API key updated the item rate:</p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/curl_command_change_modakprice.png" alt="CURL Command for Price Manipulation">
+    </figure>
+
+    <p>
+        Reloading the page in an incognito session confirmed that the backend had updated the price globally in the database.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post7/updated_modak_price.png" alt="Updated Price on Live Site">
+    </figure>
+
+    <div class="post-note">
+        <p><strong>Note:</strong> To preserve data integrity during verification, the price was immediately restored to its original value.</p>
+    </div>
+
+    <figure class="post-figure">
+        <img src="/static/post7/command_revert_modakprice.png" alt="Reverting Price Changes">
+    </figure>
+
+    <h2>Conclusion and Impact Assessment</h2>
+    <p>Exposing administrative credentials in client-side code introduces significant operational and security risks, including:</p>
+    <ul>
+        <li><strong>Unauthorized Configuration Changes:</strong> Modifying store names, links, and catalog details.</li>
+        <li><strong>Pricing and Catalog Manipulation:</strong> Modifying product pricing or altering checkout amounts.</li>
+        <li><strong>Sensitive Data Exposure:</strong> Unrestricted access to customer PII and credentials.</li>
+        <li><strong>Payment Redirection:</strong> Modifying payment destination details to divert customer payments.</li>
+    </ul>
+
+    <p>
+        Investigation showed that identical credential handling affected other tenant domains, highlighting the vulnerability inherent in using shared administrative credentials across multi-tenant web applications.
+    </p>
+
+    <h2>Responsible Disclosure and Remediation</h2>
+    <p>
+        The vulnerability was responsibly reported to the platform development team. The maintainers acknowledged the report and subsequently resolved the issue. To mitigate future risk, the backend architecture was migrated to Supabase, eliminating reliance on client-side API keys and enforcing granular row-level security policies.
+    </p>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">← Index</a>
+    </footer>
+    </div>
+    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
+        <p class="piece-rail__label">On this page</p>
+        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
+    </aside>
+    </div>
+</article>
+
+{% endblock %}

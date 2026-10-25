@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Security Assessment of University Mobile App — TushN101{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+{% block content %}
+
+<article class="piece">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <p class="piece-hero__eyebrow">Security Research · Mobile Application Assessment</p>
+        <h1 class="piece-hero__title">Security Assessment of University Mobile Application</h1>
+        <p class="piece-hero__deck">Static analysis of an educational mobile application identified hardcoded signing secrets, unauthenticated database endpoints, and cleartext communications.</p>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <div class="post-note">
+        <p><strong>Disclaimer:</strong> All sensitive credentials, cryptographic secrets, internal IP addresses, and identifiers in this article have been redacted to ensure responsible disclosure and safeguard system integrity. The reported vulnerabilities were responsibly disclosed to institutional administration and have been confirmed fixed and mitigated.</p>
+    </div>
+
+    <h2>Introduction</h2>
+    <p>
+        University mobile applications frequently interface with sensitive student records, attendance systems,
+        and internal campus services. To evaluate the security posture of mobile software distributed in educational
+        environments, I conducted a static security analysis of the official Android mobile application provided to students.
+    </p>
+    <p>
+        Using a custom static analysis and decompilation tool built in C++, I automated the extraction and inspection of
+        the application package (APK) resources, manifests, and compiled configurations to identify potential security weaknesses.
+    </p>
+
+    <h2>Findings</h2>
+
+    <h3>1. Insecure Network Configuration</h3>
+    <pre><code>android:usesCleartextTraffic="true"</code></pre>
+    <p>
+        The application manifest permitted unencrypted cleartext HTTP traffic. Transmitting data over unencrypted HTTP
+        allows network eavesdroppers on the same wireless network to inspect and tamper with communication in transit.
+    </p>
+
+    <h3>2. Hardcoded Google API Key</h3>
+    <pre><code>&lt;string name="google_api_key"&gt;AIzaSyCY1WECCTOt1kmuZDQVD_XXXXXXXXXXXXX&lt;/string&gt;</code></pre>
+    <p>
+        A Google API key was embedded directly in the application configuration. While its active scope was restricted
+        at the time of evaluation, embedding API keys without strict service or package restrictions introduces risk
+        if backend permissions are broadened in the future.
+    </p>
+
+    <h3>3. Exposed Firebase Realtime Database</h3>
+    <pre><code>&lt;string name="firebase_database_url"&gt;https://[REDACTED_APP].firebaseio.com&lt;/string&gt;</code></pre>
+    <p>
+        The Firebase database was configured without proper authentication rules, leaving the default REST endpoint accessible
+        to unauthenticated clients:
+    </p>
+    <pre><code>curl https://[REDACTED_APP].firebaseio.com/.json</code></pre>
+
+    <h3>4. Hardcoded JWT Secret &amp; Salt Keys</h3>
+    <pre><code>"AppKey": {
+    "saltKey":   "25-+c$jdPK^c^yXPEPV4[REDACTED_SALT_KEY]",
+    "secretKey": "XSz4V8UBdu@T#%Y&HNpp[REDACTED_JWT_SECRET]"
+}</code></pre>
+    <p>
+        The configuration file contained static cryptographic signing keys used for issuing and verifying JSON Web Tokens (JWTs).
+        Hardcoding symmetric signing secrets in client applications undermines the entire authentication model, as any party
+        with access to the application package can read the secret.
+    </p>
+
+    <h3>5. Internal Server IPs &amp; Staging Endpoints</h3>
+    <pre><code>"LiveServer": {
+    "myApiUrlHostel":   "http://10.130.XX.XX:8087/Hostel/api/",
+    "myApiUrlLms":      "http://[REDACTED_IP]:8081/",
+    "myApiUrlUsermgmt": "http://[REDACTED_IP]:8081/usermgmt/",
+    "myInfraApiUrl":    "https://[REDACTED_DOMAIN]:3000/"
+}</code></pre>
+    <p>
+        The bundle contained internal IP addresses and service routes for student hostels, learning management systems (LMS),
+        and user administration, exposing details of the institution's internal network topography.
+    </p>
+
+    <h2>Vulnerability &amp; Risk Analysis</h2>
+
+    <h3>Token Signing and Authorization Risks</h3>
+    <p>
+        When an application utilizes symmetric encryption for JWTs, the same key is used to both create and verify tokens.
+        With the signing secret exposed:
+    </p>
+    <ul>
+        <li>A client could craft arbitrary token claims, including elevated privileges such as administrator or faculty roles.</li>
+        <li>Backend services verifying signatures with the shared secret would accept the forged token as legitimate.</li>
+        <li>This could allow unauthorized access to administrative functions, student records, and course management systems.</li>
+    </ul>
+    <p>
+        <strong>Ethical Testing Boundary:</strong> In accordance with responsible disclosure principles, no unauthorized tokens
+        were generated or used against live systems, nor was any unauthorized access attempted. The vulnerability was documented
+        solely through static code analysis.
+    </p>
+
+    <h2>Responsible Disclosure &amp; Remediation</h2>
+    <p>
+        Upon documenting these findings, a comprehensive security advisory was compiled and submitted directly to university
+        technical administration and institutional leadership.
+    </p>
+    <p>
+        The administration acknowledged the report and promptly initiated remediation. The vulnerabilities were reported,
+        addressed, and mitigated:
+    </p>
+    <ul>
+        <li>The compromised JWT secrets and salts were revoked and replaced with secure, server-side asymmetric key signing (RS256).</li>
+        <li>Firebase database security rules were updated to enforce strict authentication requirements.</li>
+        <li>Internal IP addresses and staging endpoints were stripped from client release builds.</li>
+        <li>Cleartext traffic was disabled, enforcing HTTPS across all mobile communications.</li>
+    </ul>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">← Index</a>
+    </footer>
+    </div>
+    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
+        <p class="piece-rail__label">On this page</p>
+        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
+    </aside>
+    </div>
+</article>
+
+{% endblock %}

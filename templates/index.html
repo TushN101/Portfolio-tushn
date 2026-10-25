@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}TushN101 — Writing{% endblock %}
+{% block nav_home %} global-nav__link--active{% endblock %}
+{% block content %}
+
+<div class="page page--home">
+    <div class="home-shell">
+        <div class="home-card">
+            <header class="home-head">
+                <h1 class="home-head__title">TushN101</h1>
+                <p class="home-head__subtitle">Security researcher focused on identifying vulnerabilities, improving application security, and responsibly reporting security issues. Explore my research or get in touch to discuss security.</p>
+            </header>
+
+            {% if posts %}
+            <div class="feed">
+                {% for post in posts %}
+                <article class="feed-card">
+                    <a href="/posts/{{ post[0] }}" class="feed-card__link">
+                        <span class="feed-card__date">{{ post[3] }}</span>
+                        <h2 class="feed-card__title">{{ post[1] }}</h2>
+                        <p class="feed-card__preview">{{ post[2] }}</p>
+                    </a>
+                </article>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

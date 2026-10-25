@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Encrypted File Sharing Website Vulnerability — TushN101{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+{% block content %}
+
+<article class="piece">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <p class="piece-hero__eyebrow">February 19, 2026 · Cryptography &amp; Low Entropy</p>
+        <h1 class="piece-hero__title">Encrypted File Sharing Website Vulnerability</h1>
+        <p class="piece-hero__deck">Found a bug in the implementation of file encryption leading to full exposure of files shared online.</p>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <h2>Background</h2>
+    <p>
+        If you haven't read the <a href="/posts/3">previous writeup</a>, the short version is: the PocketBase API
+        behind this file sharing platform was completely open. No authentication, no access rules one curl command
+        and you had every file ever uploaded.
+    </p>
+    <p>
+        After that report, the developer got to work. The main fix was encryption files would now be encrypted
+        using the access code assigned to them before being stored on the server. The server would only ever hold
+        encrypted blobs. On paper, a solid response.
+    </p>
+
+    <h2>Back to Square One  Almost</h2>
+    <p>
+        I ran my old script against the updated platform. It could still list files and see their names a minor
+        PII leak, but not much else. The real problem was that every download was coming back as an encrypted blob.
+        Useless without the code. The contents were now genuinely hidden.
+    </p>
+    <p>
+        I started digging through the frontend source code to figure out what was happening maybe files were
+        being zipped, maybe it was streaming data differently. The developer had privated the repo after the
+        previous exploit, so I only had what was visible in the browser. I fed some of that to Gemini to help
+        make sense of it. It pointed towards encryption, which I confirmed by testing an actual download.
+    </p>
+    <p>
+        I poked around for other weaknesses for a while and came up empty. Then I took a closer look at the
+        raw API response.
+    </p>
+
+    <h2>Noticing the Hash Field</h2>
+
+    <figure class="post-figure">
+        <img src="/static/post6/api_leak.png" alt="API response showing a new hash field in the file records">
+        <figcaption>API response a new <code>unqiue</code> field had appeared in every file record</figcaption>
+    </figure>
+
+    <p>
+        There was a field in the listing that wasn't there before: <code>unique</code>. My first assumption was
+        that it was a checksum of the file integrity verification, something like that. It wasn't. I uploaded
+        a test file and compared the hash against the file contents. No match.
+    </p>
+    <p>
+        So I tried something else. I uploaded another file, noted the code I received, calculated the hash of that code, and checked which hash was stored.It matched the hash of the code. The developer was storing a hash of each file's access code in the
+        public API response most likely so the frontend could verify a user's input quickly without the server
+        having to attempt a full decryption every time someone guessed wrong.
+    </p>
+    <p>
+        The moment I confirmed that, the rest was obvious.
+    </p>
+
+    <h2>The Exploit</h2>
+    <p>
+        Hashes aren't reversible , but the input space here is tiny. Access codes are 4 digits. That's 10,000
+        possible values, from 0000 to 9999. Building a lookup table of every possible hash takes milliseconds.
+    </p>
+    <p>
+        I got AI to write the script. I honestly expected the table generation to take a noticeable amount of
+        time. It finished before I could even check if it was running. From there it was just combining this
+        with my old listing script: pull all file records from the API, grab the stored hash for each one, look
+        it up in the table, recover the code, use the code to decrypt the file.
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post6/poc.png" alt="Dashboard showing all files with recovered codes and download buttons">
+        <figcaption>Every file on the platform codes recovered, files decrypted, download ready</figcaption>
+    </figure>
+
+    <p>
+        Every "encrypted" file on the platform was fully recoverable. The encryption itself was real , the key
+        management was the problem. If the hash of your key is sitting in a public API response and the key is
+        a 4-digit number, we don't have encryption.
+    </p>
+
+    <h2>What Changed After</h2>
+    <p>
+        The developer has since pushed further fixes:
+    </p>
+    <ul>
+        <li><strong>Row-Level Security (RLS)</strong> files can no longer be bulk-listed; a specific identifier is now required to look up any individual record</li>
+        <li><strong>File History</strong>  users can now manually delete their own uploaded files</li>
+        <li><strong>Infrastructure hardening</strong>  moving off the free PocketHost tier to something with proper CORS and Nginx shielding</li>
+    </ul>
+    <p>
+        The developer has done really great work. I’ve reported few bugs on this website, and I think it’s time for me to step back now. Wishing the developer all the best.    </p>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">← Index</a>
+    </footer>
+    </div>
+    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
+        <p class="piece-rail__label">On this page</p>
+        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
+    </aside>
+    </div>
+</article>
+
+{% endblock %}

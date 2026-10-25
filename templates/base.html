@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff" id="meta-theme-color">
+    <meta name="color-scheme" content="light">
+    <title>{% block title %}TushN101{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <div class="readmeter" aria-hidden="false">
+        <div class="readmeter__fill" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Page scroll progress"></div>
+    </div>
+
+    <header class="global-nav" id="site-header">
+        <div class="global-nav__inner">
+            <a href="/" class="global-nav__logo">TushN101</a>
+            <nav class="global-nav__menu" aria-label="Primary">
+                <a href="/" class="global-nav__link{% block nav_home %}{% endblock %}">Home</a>
+                <a href="mailto:tushn4u@gmail.com" class="global-nav__link">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main" id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="global-footer">
+        <div class="global-footer__inner">
+            <p>© 2026 TushN101</p>
+        </div>
+    </footer>
+
+    <div class="floating-dock" id="floating-dock" aria-label="Quick actions">
+        <button type="button" class="floating-dock__btn floating-dock__btn--icon" id="btn-scroll-top" hidden aria-label="Back to top" title="Back to top">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M18 15l-6-6-6 6"/>
+            </svg>
+        </button>
+        <button type="button" class="floating-dock__btn floating-dock__btn--share" id="btn-share-url" hidden aria-label="Copy page link" title="Copy link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+            </svg>
+            <span class="floating-dock__label">Share</span>
+        </button>
+    </div>
+
+    <div class="toast-region" aria-live="polite" aria-atomic="true">
+        <div class="toast" id="site-toast" role="status"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/site.js') }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Critical Information Disclosure Bug in Government Site — TushN101{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+{% block content %}
+
+<article class="piece">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <p class="piece-hero__eyebrow">November 29, 2025 · Vulnerability Research</p>
+        <h1 class="piece-hero__title">Critical Information Disclosure Bug in Government Site</h1>
+        <p class="piece-hero__deck">Debug mode left enabled on yukti.mic.gov.in — leaking source code, environment details, Git commit hashes, and system internals to anyone who triggered an API error.</p>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <h2>The Bug</h2>
+    <p>
+        The proof of concept here is about as simple as it gets: visit one of the site's API endpoints and
+        send a GET request where a POST is expected. The server throws an error — and because debug mode
+        is enabled in production, that error response leaks a significant amount of internal detail.
+    </p>
+    <p>What was exposed on every error response:</p>
+    <ul>
+        <li>Source code snippets surrounding the error</li>
+        <li>Current environment configuration</li>
+        <li>Debug version and system version strings</li>
+        <li>Git commit hash of the running build</li>
+    </ul>
+    <p>
+        None of this should ever be visible to an unauthenticated public request on a live government platform.
+    </p>
+
+    <h2>Proof of Concept</h2>
+
+    <figure class="post-figure">
+        <img src="/static/post1/dashboard_image_1.png" alt="Debug error page showing internal details">
+        <figcaption>Figure 1 — Debug error response leaking environment and code context</figcaption>
+    </figure>
+
+    <figure class="post-figure">
+        <img src="/static/post1/dashboard_image_2.png" alt="Debug error page showing further internal details">
+        <figcaption>Figure 2 — Further detail exposed in the same error response</figcaption>
+    </figure>
+
+    <h2>Video Demonstration</h2>
+    <p>Step-by-step reproduction of the vulnerability:</p>
+
+    <div class="post-video">
+        <video controls>
+            <source src="/static/post1/poc_video.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <h2>Initial Report to CERT-In</h2>
+
+    <div class="dev-response">
+        <div class="dev-response-meta">
+            <strong>To:</strong> incident@cert-in.org.in<br>
+            <strong>Subject:</strong> Information Disclosure Bug on https://yukti.mic.gov.in/
+        </div>
+        <p>Greetings,</p>
+        <p>
+            I'm writing to report an information-disclosure vulnerability on
+            <a href="https://yukti.mic.gov.in/">https://yukti.mic.gov.in/</a>.
+        </p>
+        <p>
+            The site currently has debug mode enabled in production, which is leaking internal details
+            including code snippets, environment configuration, system version strings, and the Git commit hash
+            of the running build. It is also exposing parts of the source code that triggered each error.
+            This information should not be publicly visible on a live platform.
+        </p>
+    </div>
+
+    <h2>CERT-In Response</h2>
+
+    <figure class="post-figure">
+        <img src="/static/post1/cert_mail.png" alt="CERT-In acknowledgement email">
+        <figcaption>CERT-In acknowledgement</figcaption>
+    </figure>
+
+    <hr class="post-divider">
+
+    <p>
+        The bug has since been fixed. Simple to find — but looking at what was being leaked,
+        the potential impact was anything but simple.
+    </p>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">← Index</a>
+    </footer>
+    </div>
+    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
+        <p class="piece-rail__label">On this page</p>
+        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
+    </aside>
+    </div>
+</article>
+
+{% endblock %}
