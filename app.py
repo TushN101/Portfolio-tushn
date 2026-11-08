@@ -7,6 +7,7 @@ app = Flask(__name__)
 ## -- spazy ---
 ## -- start of code -- 
 from supabase import create_client , Client
+from flask import request
 from dotenv import load_dotenv
 import os
 
