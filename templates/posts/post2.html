@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}College Wi-Fi Security Research — TushN101{% endblock %}
+{% block title %}College Wi-Fi Tech Writeup — TushN101{% endblock %}
 {% block body_class %}is-reading{% endblock %}
 {% block content %}
 
@@ -7,9 +7,34 @@
     <div class="piece-layout">
     <div class="piece-main">
     <header class="piece-hero">
-        <p class="piece-hero__eyebrow">November 24, 2025 · Wireless Network Security</p>
-        <h1 class="piece-hero__title">College Wi-Fi Security Research: Evaluating MAC-Based Access Controls</h1>
+        <div class="article-meta">
+            <span class="chip static">Network Security</span>
+            <span class="dim">·</span>
+            <span>November 24, 2025</span>
+        </div>
+        <h1 class="piece-hero__title">College Wi-Fi Tech Writeup: Evaluating MAC-Based Access Controls</h1>
         <p class="piece-hero__deck">An investigation into campus network access control mechanisms, examining the security limitations of MAC address filtering in enterprise wireless environments.</p>
+        <div class="author-row">
+            <div class="avatar avatar-me">TN</div>
+            <div class="author-info">
+                <span class="author-name">TushN101</span>
+                <span class="author-sub">Wireless Tech Writeup · 6 min read</span>
+            </div>
+        </div>
+        <div class="action-bar">
+            <div class="action-left">
+                <a href="/" class="back-link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>All research</span>
+                </a>
+            </div>
+            <div class="action-right">
+                <button type="button" class="action-btn btn-copy-post" data-url="/posts/2" title="Copy link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                    <span>Copy link</span>
+                </button>
+            </div>
+        </div>
     </header>
     <div class="piece__flow">
         <div class="prose">
@@ -172,13 +197,15 @@ void connect_linux() {
     </div>
 
     <footer class="piece-foot">
-        <a href="/" class="piece-foot__back">← Index</a>
+        <a href="/" class="piece-foot__back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Back to all writeups</span>
+        </a>
+        <button type="button" class="pill-btn btn-copy-post" data-url="/posts/2">
+            <span>Share writeup</span>
+        </button>
     </footer>
     </div>
-    <aside class="piece-rail" id="piece-rail" aria-label="On this page" hidden>
-        <p class="piece-rail__label">On this page</p>
-        <nav class="piece-rail__nav" id="piece-rail-nav"></nav>
-    </aside>
     </div>
 </article>
 

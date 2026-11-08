@@ -1,34 +1,56 @@
+/**
+ * TushN101 — Fast, Snappy Personal Tech Blog
+ */
 (function () {
   'use strict';
 
-  var SCROLL_TOP_THRESHOLD = 400;
-
-  var header = document.getElementById('site-header');
-  var meter = document.querySelector('.readmeter');
-  var fill = document.querySelector('.readmeter__fill');
-  var lastY = 0;
-  var scrollRaf = false;
-
-  var btnScrollTop = document.getElementById('btn-scroll-top');
-  var btnShare = document.getElementById('btn-share-url');
-  var toastEl = document.getElementById('site-toast');
-
+  var SCROLL_TOP_THRESHOLD = 300;
   var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var tocHeadings = null;
-  var tocLinks = null;
+  // DOM Elements
+  var menuToggle = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  var feed = document.getElementById('feed');
+  var feedTabs = document.getElementById('feedTabs');
+  var emptyMsg = document.getElementById('emptyMsg');
+  var readmeterFill = document.getElementById('readmeter-fill');
+  var btnScrollTop = document.getElementById('btn-scroll-top');
+  var btnShareUrl = document.getElementById('btn-share-url');
+  var topbarShareBtn = document.getElementById('topbarShareBtn');
+  var toastEl = document.getElementById('site-toast');
 
+  var scrollRaf = false;
+
+  /* ============================================================
+     1. Toast Notifications
+     ============================================================ */
+  var toastTimer = null;
   function showToast(message) {
     if (!toastEl) return;
     toastEl.textContent = message;
     toastEl.classList.add('is-visible');
-    window.clearTimeout(showToast._t);
-    showToast._t = window.setTimeout(function () {
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
       toastEl.classList.remove('is-visible');
-    }, 2600);
+    }, 2200);
   }
 
-  function fallbackCopy(text) {
+  /* ============================================================
+     2. Clipboard Helpers
+     ============================================================ */
+  function copyText(text, successMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast(successMsg || 'Copied to clipboard');
+      }).catch(function () {
+        fallbackCopy(text, successMsg);
+      });
+    } else {
+      fallbackCopy(text, successMsg);
+    }
+  }
+
+  function fallbackCopy(text, successMsg) {
     var ta = document.createElement('textarea');
     ta.value = text;
     ta.setAttribute('readonly', '');
@@ -38,146 +60,284 @@
     ta.select();
     try {
       document.execCommand('copy');
-      showToast('Copied to clipboard');
+      showToast(successMsg || 'Copied to clipboard');
     } catch (e) {
       showToast('Could not copy');
     }
     document.body.removeChild(ta);
   }
 
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text).then(function () {
-        showToast('Copied to clipboard');
-      }).catch(function () {
-        fallbackCopy(text);
+  /* ============================================================
+     3. Instant Link Hover Prefetching (< 15ms Click-to-Render)
+     ============================================================ */
+  var prefetchedUrls = new Set();
+  function prefetchUrl(url) {
+    if (!url || prefetchedUrls.has(url)) return;
+    if (url.startsWith('#') || url.startsWith('mailto:') || url.startsWith('javascript:')) return;
+    if (url.startsWith('http') && !url.startsWith(window.location.origin)) return;
+
+    prefetchedUrls.add(url);
+    var link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = url;
+    link.as = 'document';
+    document.head.appendChild(link);
+  }
+
+  function initHoverPrefetch() {
+    document.addEventListener('mouseover', function (e) {
+      var a = e.target.closest('a');
+      if (a && a.href) {
+        var href = a.getAttribute('href');
+        if (href && (href.startsWith('/') || href.startsWith(window.location.origin))) {
+          prefetchUrl(a.href);
+        }
+      }
+    }, { passive: true });
+  }
+
+  /* ============================================================
+     4. Hamburger Sidebar Toggle (Desktop & Mobile)
+     ============================================================ */
+  function initSidebarToggle() {
+    // Restore desktop preference on load
+    if (window.innerWidth > 960) {
+      try {
+        if (localStorage.getItem('sidebar_collapsed') === '1') {
+          document.body.classList.add('sidebar-collapsed');
+        }
+      } catch (e) {}
+    }
+
+    if (menuToggle) {
+      menuToggle.addEventListener('click', function () {
+        if (window.innerWidth > 960) {
+          document.body.classList.toggle('sidebar-collapsed');
+          var isCollapsed = document.body.classList.contains('sidebar-collapsed');
+          try {
+            localStorage.setItem('sidebar_collapsed', isCollapsed ? '1' : '0');
+          } catch (e) {}
+        } else {
+          document.body.classList.toggle('menu-open');
+        }
       });
     }
-    fallbackCopy(text);
-    return Promise.resolve();
-  }
 
-  function initShareButton() {
-    if (!btnShare) return;
-    var path = window.location.pathname || '/';
-    if (path === '/' || path === '') {
-      btnShare.hidden = true;
-      return;
+    if (scrim) {
+      scrim.addEventListener('click', function () {
+        document.body.classList.remove('menu-open');
+      });
     }
-    btnShare.hidden = false;
-    btnShare.addEventListener('click', function () {
-      copyToClipboard(window.location.href);
+
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        if (document.body.classList.contains('menu-open')) {
+          document.body.classList.remove('menu-open');
+        }
+      }
     });
   }
 
-  function initScrollTop() {
-    if (!btnScrollTop) return;
-    btnScrollTop.addEventListener('click', function () {
-      window.scrollTo({
-        top: 0,
-        behavior: prefersReducedMotion ? 'auto' : 'smooth'
+  /* ============================================================
+     5. Scraper-Protected Email Reveal Button
+     ============================================================ */
+  function initEmailReveal() {
+    var btn = document.getElementById('btnRevealEmail');
+    var container = document.getElementById('emailRevealContainer');
+    if (!btn || !container) return;
+
+    btn.addEventListener('click', function () {
+      // Assemble at runtime to prevent automated crawlers
+      var user = ['t', 'u', 's', 'h', 'n', '4', 'u'].join('');
+      var domain = ['g', 'm', 'a', 'i', 'l', '.', 'c', 'o', 'm'].join('');
+      var email = user + '@' + domain;
+
+      container.innerHTML =
+        '<div class="revealed-email-row">' +
+          '<a href="mailto:' + email + '" class="revealed-email-link">' +
+            '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+            '<span>' + email + '</span>' +
+          '</a>' +
+          '<button type="button" class="pill-btn-sm" id="btnCopyEmail" title="Copy email address">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '<span>Copy</span>' +
+          '</button>' +
+        '</div>';
+
+      var copyBtn = document.getElementById('btnCopyEmail');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+          copyText(email, 'Email copied to clipboard');
+        });
+      }
+
+      showToast('Email revealed');
+    });
+  }
+
+  /* ============================================================
+     6. Feed Tab and Topic Filtering
+     ============================================================ */
+  var currentTab = 'all';
+
+  function filterFeed() {
+    if (!feed) return;
+    var posts = feed.querySelectorAll('.post');
+    if (!posts || posts.length === 0) return;
+
+    var visibleCount = 0;
+
+    posts.forEach(function (post) {
+      var cat = post.getAttribute('data-category') || '';
+      var isFeatured = post.getAttribute('data-featured') === 'true';
+
+      var match = true;
+      if (currentTab === 'featured') {
+        match = isFeatured;
+      } else if (currentTab === 'deepdives') {
+        match = cat === 'api' || cat === 'network' || cat === 'crypto';
+      } else if (currentTab !== 'all') {
+        match = cat === currentTab;
+      }
+
+      if (match) {
+        post.classList.remove('is-hidden');
+        visibleCount++;
+      } else {
+        post.classList.add('is-hidden');
+      }
+    });
+
+    if (emptyMsg) {
+      emptyMsg.hidden = visibleCount > 0;
+    }
+  }
+
+  function initFeedFilters() {
+    if (feedTabs) {
+      var tabs = feedTabs.querySelectorAll('.tab');
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          tabs.forEach(function (t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+          currentTab = tab.getAttribute('data-tab') || 'all';
+          filterFeed();
+        });
+      });
+    }
+
+    var topicButtons = document.querySelectorAll('[data-topic-filter]');
+    topicButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var topic = btn.getAttribute('data-topic-filter');
+        if (feed) {
+          if (feedTabs) {
+            feedTabs.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+          }
+          currentTab = topic === 'all' ? 'all' : topic;
+          filterFeed();
+          feed.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+        } else {
+          window.location.href = '/?topic=' + topic;
+        }
+
+        if (document.body.classList.contains('menu-open')) {
+          document.body.classList.remove('menu-open');
+        }
       });
     });
-  }
 
-  function updateScrollTopVisibility(y) {
-    if (!btnScrollTop) return;
-    btnScrollTop.hidden = y < SCROLL_TOP_THRESHOLD;
-  }
-
-  function updateTocActive(y) {
-    if (!tocHeadings || !tocLinks || tocHeadings.length === 0) return;
-    var scrollPos = y + 120;
-    var current = '';
-    tocHeadings.forEach(function (h) {
-      if (h.offsetTop <= scrollPos) current = h.id;
-    });
-    tocLinks.forEach(function (a) {
-      a.classList.toggle('is-active', current && a.getAttribute('href') === '#' + current);
+    document.addEventListener('click', function (e) {
+      var copyBtn = e.target.closest('.btn-copy-post');
+      if (copyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var relUrl = copyBtn.getAttribute('data-url');
+        var fullUrl = window.location.origin + relUrl;
+        copyText(fullUrl, 'Link copied to clipboard');
+      }
     });
   }
 
-  function update() {
+  /* ============================================================
+     7. Scroll Progress Meter & Floating Dock
+     ============================================================ */
+  function updateScroll() {
     scrollRaf = false;
     var y = window.scrollY || document.documentElement.scrollTop;
 
-    if (fill) {
+    if (readmeterFill) {
       var doc = document.documentElement;
       var max = doc.scrollHeight - doc.clientHeight;
-      var p = max > 0 ? (y / max) * 100 : 0;
-      var n = Math.min(100, Math.max(0, Math.round(p)));
-      fill.style.width = n + '%';
-      fill.setAttribute('aria-valuenow', String(n));
+      var pct = max > 0 ? (y / max) * 100 : 0;
+      var clamped = Math.min(100, Math.max(0, Math.round(pct)));
+      readmeterFill.style.width = clamped + '%';
+      readmeterFill.setAttribute('aria-valuenow', String(clamped));
     }
 
-    updateScrollTopVisibility(y);
-    updateTocActive(y);
-
-    if (header) {
-      if (y < 8) {
-        header.classList.remove('global-nav--hidden');
-      } else if (y > lastY && y > 56) {
-        header.classList.add('global-nav--hidden');
-      } else if (y < lastY) {
-        header.classList.remove('global-nav--hidden');
-      }
-      lastY = y;
+    if (btnScrollTop) {
+      btnScrollTop.hidden = y < SCROLL_TOP_THRESHOLD;
     }
   }
 
   function onScroll() {
     if (!scrollRaf) {
       scrollRaf = true;
-      requestAnimationFrame(update);
+      requestAnimationFrame(updateScroll);
     }
   }
 
-  function slugify(text) {
-    return text
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 48) || 'section';
+  function initScroll() {
+    window.addEventListener('scroll', onScroll, { passive: true });
+    updateScroll();
+
+    if (btnScrollTop) {
+      btnScrollTop.addEventListener('click', function () {
+        window.scrollTo({
+          top: 0,
+          behavior: prefersReducedMotion ? 'auto' : 'smooth'
+        });
+      });
+    }
+
+    if (btnShareUrl) {
+      btnShareUrl.addEventListener('click', function () {
+        copyText(window.location.href, 'Page link copied to clipboard');
+      });
+    }
+
+    if (topbarShareBtn) {
+      topbarShareBtn.addEventListener('click', function () {
+        copyText(window.location.href, 'Page link copied to clipboard');
+      });
+    }
   }
 
-  function initToc() {
-    var rail = document.getElementById('piece-rail');
-    var nav = document.getElementById('piece-rail-nav');
-    var prose = document.querySelector('.piece .prose');
-    if (!rail || !nav || !prose) return;
-
-    var headings = prose.querySelectorAll('h2');
-    if (headings.length === 0) return;
-
-    var used = {};
-    headings.forEach(function (h, i) {
-      var id = h.id;
-      if (!id) {
-        var base = slugify(h.textContent || 'section-' + (i + 1));
-        id = base;
-        var n = 2;
-        while (used[id] || document.getElementById(id)) {
-          id = base + '-' + n;
-          n++;
+  function initUrlParams() {
+    var params = new URLSearchParams(window.location.search);
+    var topic = params.get('topic');
+    if (topic && feed) {
+      currentTab = topic;
+      if (feedTabs) {
+        var activeTab = feedTabs.querySelector('[data-tab="' + topic + '"]');
+        if (activeTab) {
+          feedTabs.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+          activeTab.classList.add('active');
         }
-        used[id] = true;
-        h.id = id;
       }
-      var a = document.createElement('a');
-      a.href = '#' + h.id;
-      a.textContent = (h.textContent || 'Section').trim().slice(0, 80);
-      nav.appendChild(a);
-    });
-
-    rail.hidden = false;
-    tocHeadings = headings;
-    tocLinks = nav.querySelectorAll('a');
+      filterFeed();
+    }
   }
 
-  initShareButton();
-  initScrollTop();
-  initToc();
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-  update();
+  // Initialize
+  initHoverPrefetch();
+  initSidebarToggle();
+  initEmailReveal();
+  initFeedFilters();
+  initScroll();
+  initUrlParams();
 })();

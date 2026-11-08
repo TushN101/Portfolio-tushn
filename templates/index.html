@@ -1,31 +1,143 @@
 {% extends "base.html" %}
-{% block title %}TushN101 — Writing{% endblock %}
-{% block nav_home %} global-nav__link--active{% endblock %}
+{% block title %}TushN101 — Tech Blog &amp; Engineering Notes{% endblock %}
+{% block nav_home %} active{% endblock %}
+
 {% block content %}
-
-<div class="page page--home">
-    <div class="home-shell">
-        <div class="home-card">
-            <header class="home-head">
-                <h1 class="home-head__title">TushN101</h1>
-                <p class="home-head__subtitle">Security researcher focused on identifying vulnerabilities, improving application security, and responsibly reporting security issues. Explore my research or get in touch to discuss security.</p>
-            </header>
-
-            {% if posts %}
-            <div class="feed">
-                {% for post in posts %}
-                <article class="feed-card">
-                    <a href="/posts/{{ post[0] }}" class="feed-card__link">
-                        <span class="feed-card__date">{{ post[3] }}</span>
-                        <h2 class="feed-card__title">{{ post[1] }}</h2>
-                        <p class="feed-card__preview">{{ post[2] }}</p>
-                    </a>
-                </article>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-    </div>
+<div class="banner">
+    <span class="banner-tag">BLOG</span>
+    <span class="banner-text">Personal notes, technical deep dives &amp; engineering writeups.</span>
+    <a href="/contact" class="banner-link">Get in touch</a>
 </div>
 
+<div class="layout">
+    <!-- Main Feed Column -->
+    <div class="feed-col">
+        <div class="tabs" id="feedTabs" role="tablist">
+            <button class="tab active" data-tab="all" role="tab" aria-selected="true">All Posts</button>
+            <button class="tab" data-tab="featured" role="tab" aria-selected="false">Featured</button>
+            <button class="tab" data-tab="deepdives" role="tab" aria-selected="false">Deep Dives</button>
+        </div>
+
+        <div id="feed" class="feed">
+            {% if posts %}
+                {% for post in posts %}
+                <article class="post" data-id="{{ post[0] }}" data-category="{{ post[8] if post|length > 8 else '' }}" data-featured="{{ 'true' if post|length > 7 and post[7] else 'false' }}">
+                    <div class="post-body">
+                        <div class="post-meta">
+                            <span class="m-ico">TN</span>
+                            <b>TushN101</b>
+                            <span class="dim">·</span>
+                            <span class="dim">{{ post[3] }}</span>
+                            {% if post|length > 4 and post[4] %}
+                            <span class="chip-mini">{{ post[4] }}</span>
+                            {% endif %}
+                        </div>
+                        <h2 class="post-title">
+                            <a href="/posts/{{ post[0] }}" class="post-title-link">{{ post[1] }}</a>
+                        </h2>
+                        <p class="post-sub">{{ post[2] }}</p>
+                        <div class="post-foot">
+                            <div class="post-stats">
+                                <span class="stat">
+                                    {% if post|length > 7 and post[7] %}<span class="star" title="Featured Post">★</span>{% endif %}
+                                    {{ post[5] if post|length > 5 else '5 min read' }}
+                                </span>
+                                <span class="stat read-more-stat">
+                                    <a href="/posts/{{ post[0] }}" class="read-more-link">Read post <i>→</i></a>
+                                </span>
+                            </div>
+                            <div class="post-actions">
+                                <button type="button" class="icon-btn-sm btn-copy-post" data-url="/posts/{{ post[0] }}" title="Copy link" aria-label="Copy link to {{ post[1] }}">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% if post|length > 6 and post[6] %}
+                    <a href="/posts/{{ post[0] }}" class="post-thumb" tabindex="-1" aria-hidden="true">
+                        <img src="{{ post[6] }}" alt="{{ post[1] }}" loading="lazy" width="112" height="112">
+                    </a>
+                    {% else %}
+                    <a href="/posts/{{ post[0] }}" class="post-thumb post-thumb--glyph" tabindex="-1" aria-hidden="true">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    </a>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <p class="empty" id="emptyMsg" hidden>No posts found in this section.</p>
+    </div>
+
+    <!-- Right Sidebar Column -->
+    <aside class="right-col">
+        <div class="write-card">
+            <div class="write-card-top">
+                <div class="write-card-paper">
+                    <span class="plus-circle">TN</span>
+                    <span class="write-placeholder">Code, systems, &amp; notes.</span>
+                </div>
+            </div>
+            <div class="write-card-body">
+                <h3>TushN101</h3>
+                <p class="write-card-desc">Personal tech blog where I publish notes, technical writeups, and deep dives on software development, tech experiments, and engineering.</p>
+                <div class="write-card-links">
+                    <a href="/posts/7">Master API Key Exposure Writeup <i>↗</i></a>
+                    <a href="/posts/2">College Wi-Fi Security Research <i>↗</i></a>
+                    <a href="/about">About this blog <i>↗</i></a>
+                    <a href="/contact">Get in touch <i>↗</i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="picks">
+            <h4>Featured Posts</h4>
+            <div class="picks-list">
+                <a href="/posts/7" class="pick">
+                    <div class="pick-meta">
+                        <span class="m-ico">TN</span>
+                        <b>TushN101</b>
+                        <span class="dim">in</span>
+                        <span>Web &amp; APIs</span>
+                    </div>
+                    <div class="pick-title">Master API Key Exposure: Infrastructure-Wide Compromise</div>
+                    <div class="pick-date"><span class="star">★</span> March 31, 2026 · 7 min read</div>
+                </a>
+                <a href="/posts/6" class="pick">
+                    <div class="pick-meta">
+                        <span class="m-ico">TN</span>
+                        <b>TushN101</b>
+                        <span class="dim">in</span>
+                        <span>Cryptography</span>
+                    </div>
+                    <div class="pick-title">Encrypted File Sharing Website Vulnerability</div>
+                    <div class="pick-date"><span class="star">★</span> February 14, 2026 · 5 min read</div>
+                </a>
+                <a href="/posts/1" class="pick">
+                    <div class="pick-meta">
+                        <span class="m-ico">TN</span>
+                        <b>TushN101</b>
+                        <span class="dim">in</span>
+                        <span>Bug Analysis</span>
+                    </div>
+                    <div class="pick-title">Critical Information Disclosure Bug in Government Site</div>
+                    <div class="pick-date"><span class="star">★</span> November 29, 2025 · 4 min read</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="topics-section">
+            <h4>Topics</h4>
+            <div class="chips">
+                <button type="button" class="chip static topic-filter-chip" data-topic-filter="api">Web &amp; APIs</button>
+                <button type="button" class="chip static topic-filter-chip" data-topic-filter="crypto">Cryptography</button>
+                <button type="button" class="chip static topic-filter-chip" data-topic-filter="network">Networking</button>
+                <button type="button" class="chip static topic-filter-chip" data-topic-filter="disclosure">Bug Analysis</button>
+                <button type="button" class="chip static topic-filter-chip" data-topic-filter="mobile">Mobile Apps</button>
+                <button type="button" class="chip static topic-filter-chip" data-topic-filter="all">All Topics</button>
+            </div>
+        </div>
+    </aside>
+</div>
 {% endblock %}

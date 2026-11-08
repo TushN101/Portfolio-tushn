@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Contact — TushN101{% endblock %}
+{% block nav_contact %} active{% endblock %}
+
+{% block content %}
+<div class="page-col">
+    <div class="page-header">
+        <h1 class="page-title">Contact</h1>
+        <p class="page-sub">You can reach me directly via email below.</p>
+    </div>
+
+    <div class="contact-card">
+        <p class="contact-desc">
+            Have a question, feedback on a post, or want to connect? Click below to reveal my email address.
+        </p>
+
+        <div class="email-reveal-wrapper">
+            <div class="email-reveal-container" id="emailRevealContainer">
+                <button type="button" class="pill-btn pill-btn--reveal" id="btnRevealEmail">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                    <span>Click to reveal email</span>
+                </button>
+            </div>
+            <p class="email-anti-bot-note">Email is hidden to protect against automated web crawlers.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
