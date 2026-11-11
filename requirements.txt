@@ -1,13 +1,11 @@
 annotated-types==0.8.0
 anyio==4.16.0
-blinker==1.9.0
 certifi==2026.10.23
 cffi==2.1.1
 click==8.3.1
 cryptography==50.0.2
 deprecation==2.1.0
-dotenv==0.9.9
-Flask==3.1.2
+fastapi>=0.110.0
 h11==0.16.0
 h2==4.4.1
 hpack==4.2.0
@@ -15,7 +13,6 @@ httpcore==1.0.9
 httpx==0.28.1
 hyperframe==6.1.0
 idna==3.20
-itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.3
 multidict==7.2.1
@@ -29,11 +26,11 @@ PyJWT==2.15.1
 python-dotenv==1.2.4
 realtime==2.34.1
 storage3==2.34.1
-supabase==2.34.1
 supabase-auth==2.34.1
 supabase-functions==2.34.1
+supabase==2.34.1
 typing-inspection==0.4.5
 typing_extensions==4.16.0
+uvicorn>=0.28.0
 websockets==15.0.1
-Werkzeug==3.1.4
 yarl==1.25.1
