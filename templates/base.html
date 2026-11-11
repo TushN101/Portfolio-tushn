@@ -1,11 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#121212" id="meta-theme-color">
     <meta name="color-scheme" content="dark">
     <title>{% block title %}TushN101 — Tech Blog &amp; Notes{% endblock %}</title>
+
+    <!-- SEO Meta Tags & Snippet Optimization -->
+    <meta name="description" content="{% block meta_description %}{% if post and post|length > 2 %}{{ post[2] }}{% else %}Personal notes, technical deep dives &amp; engineering writeups on software engineering, API security, cryptography, and network protocols by TushN101.{% endif %}{% endblock %}">
+    <meta name="author" content="TushN101">
+    <meta name="robots" content="{% block meta_robots %}index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1{% endblock %}">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <link rel="canonical" href="{% block canonical_url %}{{ canonical_url or request.url }}{% endblock %}">
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:site_name" content="TushN101">
+    <meta property="og:type" content="{% block og_type %}{% if post %}article{% else %}website{% endif %}{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ canonical_url or request.url }}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{% if post and post|length > 1 %}{{ post[1] }} — TushN101{% else %}TushN101 — Tech Blog &amp; Notes{% endif %}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{% if post and post|length > 2 %}{{ post[2] }}{% else %}Personal notes, technical deep dives &amp; engineering writeups on software engineering, API security, cryptography, and network protocols by TushN101.{% endif %}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{% if post and post|length > 6 and post[6] %}{{ base_url or '' }}{{ post[6] }}{% else %}{{ base_url or '' }}/static/post7/image_with_apikey.png{% endif %}{% endblock %}">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{% block twitter_url %}{{ canonical_url or request.url }}{% endblock %}">
+    <meta name="twitter:title" content="{% block twitter_title %}{% if post and post|length > 1 %}{{ post[1] }} — TushN101{% else %}TushN101 — Tech Blog &amp; Notes{% endif %}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{% if post and post|length > 2 %}{{ post[2] }}{% else %}Personal notes, technical deep dives &amp; engineering writeups on software engineering, API security, cryptography, and network protocols by TushN101.{% endif %}{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{% if post and post|length > 6 and post[6] %}{{ base_url or '' }}{{ post[6] }}{% else %}{{ base_url or '' }}/static/post7/image_with_apikey.png{% endif %}{% endblock %}">
+
+    <!-- JSON-LD Structured Data for Search Engines -->
+    {% block structured_data %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "TushN101",
+      "url": "{{ base_url or request.base_url }}",
+      "description": "Personal notes, technical deep dives & engineering writeups by TushN101.",
+      "author": {
+        "@type": "Person",
+        "name": "TushN101"
+      }
+    }
+    </script>
+    {% endblock %}
 
     <!-- Ultra-fast font preloading: 0ms external latency -->
     <link rel="preload" href="{{ url_for('static', filename='fonts/inter-latin.woff2') }}" as="font" type="font/woff2" crossorigin>

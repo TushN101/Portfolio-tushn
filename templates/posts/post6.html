@@ -1,9 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Encrypted File Sharing Website Vulnerability — TushN101{% endblock %}
+{% block meta_description %}Found a bug in the implementation of file encryption leading to full exposure of files shared online.{% endblock %}
+{% block og_title %}Encrypted File Sharing Website Vulnerability — TushN101{% endblock %}
+{% block og_description %}Found a bug in the implementation of file encryption leading to full exposure of files shared online.{% endblock %}
+{% block og_image %}{{ base_url }}/static/post6/poc.png{% endblock %}
+{% block twitter_image %}{{ base_url }}/static/post6/poc.png{% endblock %}
 {% block body_class %}is-reading{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Encrypted File Sharing Website Vulnerability",
+  "description": "Found a bug in the implementation of file encryption leading to full exposure of files shared online.",
+  "author": {
+    "@type": "Person",
+    "name": "TushN101"
+  },
+  "datePublished": "2026-02-14",
+  "image": "{{ base_url }}/static/post6/poc.png",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ canonical_url or request.url }}"
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
-<article class="piece">
+<article class="piece" itemscope itemtype="https://schema.org/BlogPosting">
     <div class="piece-layout">
     <div class="piece-main">
     <header class="piece-hero">
@@ -12,8 +39,8 @@
             <span class="dim">·</span>
             <span>February 19, 2026</span>
         </div>
-        <h1 class="piece-hero__title">Encrypted File Sharing Website Vulnerability</h1>
-        <p class="piece-hero__deck">Found a bug in the implementation of file encryption leading to full exposure of files shared online.</p>
+        <h1 class="piece-hero__title" itemprop="headline">Encrypted File Sharing Website Vulnerability</h1>
+        <p class="piece-hero__deck" itemprop="description">Found a bug in the implementation of file encryption leading to full exposure of files shared online.</p>
         <div class="author-row">
             <div class="avatar avatar-me">TN</div>
             <div class="author-info">

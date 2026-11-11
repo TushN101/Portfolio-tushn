@@ -1,9 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Exposed Corporate Data on File Sharing Platform — TushN101{% endblock %}
+{% block meta_description %}Security analysis of fs.sujal.xyz: how an unauthenticated API endpoint exposed stored files, including internal corporate credentials and configurations.{% endblock %}
+{% block og_title %}Exposed Corporate Data on File Sharing Platform — TushN101{% endblock %}
+{% block og_description %}Security analysis of fs.sujal.xyz: how an unauthenticated API endpoint exposed stored files, including internal corporate credentials and configurations.{% endblock %}
+{% block og_image %}{{ base_url }}/static/post3/output.png{% endblock %}
+{% block twitter_image %}{{ base_url }}/static/post3/output.png{% endblock %}
 {% block body_class %}is-reading{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Exposed Corporate Data on File Sharing Platform",
+  "description": "Security analysis of fs.sujal.xyz: how an unauthenticated API endpoint exposed stored files, including internal corporate credentials and configurations.",
+  "author": {
+    "@type": "Person",
+    "name": "TushN101"
+  },
+  "datePublished": "2024-07-28",
+  "image": "{{ base_url }}/static/post3/output.png",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ canonical_url or request.url }}"
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
-<article class="piece">
+<article class="piece" itemscope itemtype="https://schema.org/BlogPosting">
     <div class="piece-layout">
     <div class="piece-main">
     <header class="piece-hero">
@@ -12,8 +39,8 @@
             <span class="dim">·</span>
             <span>July 28, 2024</span>
         </div>
-        <h1 class="piece-hero__title">Exposed Corporate Data on File Sharing Platform</h1>
-        <p class="piece-hero__deck">Security analysis of fs.sujal.xyz: how an unauthenticated API endpoint exposed stored files, including internal corporate credentials and configurations.</p>
+        <h1 class="piece-hero__title" itemprop="headline">Exposed Corporate Data on File Sharing Platform</h1>
+        <p class="piece-hero__deck" itemprop="description">Security analysis of fs.sujal.xyz: how an unauthenticated API endpoint exposed stored files, including internal corporate credentials and configurations.</p>
         <div class="author-row">
             <div class="avatar avatar-me">TN</div>
             <div class="author-info">

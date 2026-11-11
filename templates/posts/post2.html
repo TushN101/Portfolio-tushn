@@ -1,9 +1,36 @@
 {% extends "base.html" %}
-{% block title %}College Wi-Fi Tech Writeup — TushN101{% endblock %}
+{% block title %}College Wi-Fi Tech Writeup: Evaluating MAC-Based Access Controls — TushN101{% endblock %}
+{% block meta_description %}An investigation into campus network access control mechanisms, examining the security limitations of MAC address filtering in enterprise wireless environments.{% endblock %}
+{% block og_title %}College Wi-Fi Tech Writeup: Evaluating MAC-Based Access Controls — TushN101{% endblock %}
+{% block og_description %}An investigation into campus network access control mechanisms, examining the security limitations of MAC address filtering in enterprise wireless environments.{% endblock %}
+{% block og_image %}{{ base_url }}/static/post2/tool_action.png{% endblock %}
+{% block twitter_image %}{{ base_url }}/static/post2/tool_action.png{% endblock %}
 {% block body_class %}is-reading{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "College Wi-Fi Tech Writeup: Evaluating MAC-Based Access Controls",
+  "description": "An investigation into campus network access control mechanisms, examining the security limitations of MAC address filtering in enterprise wireless environments.",
+  "author": {
+    "@type": "Person",
+    "name": "TushN101"
+  },
+  "datePublished": "2025-11-24",
+  "image": "{{ base_url }}/static/post2/tool_action.png",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ canonical_url or request.url }}"
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
-<article class="piece">
+<article class="piece" itemscope itemtype="https://schema.org/BlogPosting">
     <div class="piece-layout">
     <div class="piece-main">
     <header class="piece-hero">
@@ -12,8 +39,8 @@
             <span class="dim">·</span>
             <span>November 24, 2025</span>
         </div>
-        <h1 class="piece-hero__title">College Wi-Fi Tech Writeup: Evaluating MAC-Based Access Controls</h1>
-        <p class="piece-hero__deck">An investigation into campus network access control mechanisms, examining the security limitations of MAC address filtering in enterprise wireless environments.</p>
+        <h1 class="piece-hero__title" itemprop="headline">College Wi-Fi Tech Writeup: Evaluating MAC-Based Access Controls</h1>
+        <p class="piece-hero__deck" itemprop="description">An investigation into campus network access control mechanisms, examining the security limitations of MAC address filtering in enterprise wireless environments.</p>
         <div class="author-row">
             <div class="avatar avatar-me">TN</div>
             <div class="author-info">

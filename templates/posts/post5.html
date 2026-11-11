@@ -1,9 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Public Directory Exposure on Government Website — TushN101{% endblock %}
+{% block meta_description %}How an open /emarketplace/ directory on phdcci.in led to a downloadable WordPress backup with database credentials inside.{% endblock %}
+{% block og_title %}Public Directory Exposure on Government Website — TushN101{% endblock %}
+{% block og_description %}How an open /emarketplace/ directory on phdcci.in led to a downloadable WordPress backup with database credentials inside.{% endblock %}
+{% block og_image %}{{ base_url }}/static/post5/directory_listing.png{% endblock %}
+{% block twitter_image %}{{ base_url }}/static/post5/directory_listing.png{% endblock %}
 {% block body_class %}is-reading{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Public Directory Exposure on Government Website",
+  "description": "How an open /emarketplace/ directory on phdcci.in led to a downloadable WordPress backup with database credentials inside.",
+  "author": {
+    "@type": "Person",
+    "name": "TushN101"
+  },
+  "datePublished": "2024-06-10",
+  "image": "{{ base_url }}/static/post5/directory_listing.png",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ canonical_url or request.url }}"
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
-<article class="piece">
+<article class="piece" itemscope itemtype="https://schema.org/BlogPosting">
     <div class="piece-layout">
     <div class="piece-main">
     <header class="piece-hero">
@@ -12,8 +39,8 @@
             <span class="dim">·</span>
             <span>June 10, 2024</span>
         </div>
-        <h1 class="piece-hero__title">Public Directory Exposure on Government Website</h1>
-        <p class="piece-hero__deck">How an open /emarketplace/ directory on phdcci.in led to a downloadable WordPress backup with database credentials inside.</p>
+        <h1 class="piece-hero__title" itemprop="headline">Public Directory Exposure on Government Website</h1>
+        <p class="piece-hero__deck" itemprop="description">How an open /emarketplace/ directory on phdcci.in led to a downloadable WordPress backup with database credentials inside.</p>
         <div class="author-row">
             <div class="avatar avatar-me">TN</div>
             <div class="author-info">
