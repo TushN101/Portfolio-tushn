@@ -10,7 +10,12 @@ import jinja2
 from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 from starlette.templating import Jinja2Templates
-from supabase import Client, create_client
+
+try:
+    from supabase import Client, create_client
+except ImportError:
+    Client = None
+    create_client = None
 
 # Load environment variables
 load_dotenv()
@@ -22,7 +27,7 @@ supabase_url = os.environ.get("SUPABASE_URL")
 supabase_key = os.environ.get("SUPABASE_KEY")
 
 supabase: Optional[Client] = None
-if supabase_url and supabase_key:
+if supabase_url and supabase_key and create_client is not None:
     try:
         supabase = create_client(supabase_url, supabase_key)
     except Exception as e:
