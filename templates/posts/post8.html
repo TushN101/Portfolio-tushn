@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+{% block title %}Building Full-Stack Observability with Prometheus &amp; Grafana — TushN101{% endblock %}
+{% block meta_description %}A practical guide to end-to-end monitoring: instrumenting Python Flask applications, capturing system metrics with Node Exporter, building Grafana dashboards, resolving label mismatches, and configuring Prometheus alert rules.{% endblock %}
+{% block og_title %}Building Full-Stack Observability with Prometheus &amp; Grafana — TushN101{% endblock %}
+{% block og_description %}A practical guide to end-to-end monitoring: instrumenting Python Flask applications, capturing system metrics with Node Exporter, building Grafana dashboards, resolving label mismatches, and configuring Prometheus alert rules.{% endblock %}
+{% block og_image %}{{ base_url }}/static/post8/grafana_flask_dashboard.png{% endblock %}
+{% block twitter_image %}{{ base_url }}/static/post8/grafana_flask_dashboard.png{% endblock %}
+{% block body_class %}is-reading{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Building Full-Stack Observability with Prometheus & Grafana",
+  "description": "A practical guide to end-to-end monitoring: instrumenting Python Flask applications, capturing system metrics with Node Exporter, building Grafana dashboards, resolving label mismatches, and configuring Prometheus alert rules.",
+  "author": {
+    "@type": "Person",
+    "name": "TushN101"
+  },
+  "datePublished": "2026-11-22",
+  "image": "{{ base_url }}/static/post8/grafana_flask_dashboard.png",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ canonical_url or request.url }}"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<article class="piece" itemscope itemtype="https://schema.org/BlogPosting">
+    <div class="piece-layout">
+    <div class="piece-main">
+    <header class="piece-hero">
+        <div class="article-meta">
+            <span class="chip static">DevOps &amp; Observability</span>
+            <span class="dim">·</span>
+            <span>November 22, 2026</span>
+        </div>
+        <h1 class="piece-hero__title" itemprop="headline">Building Full-Stack Observability with Prometheus &amp; Grafana</h1>
+        <p class="piece-hero__deck" itemprop="description">From zero to live monitoring: instrumenting Python web services, gathering host telemetry with Node Exporter, crafting real-time dashboards, debugging label mismatch traps, and setting up automated threshold alerts.</p>
+        <div class="author-row">
+            <div class="avatar avatar-me">TN</div>
+            <div class="author-info">
+                <span class="author-name">TushN101</span>
+                <span class="author-sub">Systems &amp; Architecture · 8 min read</span>
+            </div>
+        </div>
+        <div class="action-bar">
+            <div class="action-left">
+                <a href="/" class="back-link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>All research</span>
+                </a>
+            </div>
+            <div class="action-right">
+                <button type="button" class="action-btn btn-copy-post" data-url="/posts/8" title="Copy link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                    <span>Copy link</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    <div class="piece__flow">
+        <div class="prose">
+
+    <h2>1. The Core Architecture: Why Prometheus &amp; Grafana?</h2>
+    <p>
+        When running web applications and server infrastructure, you quickly discover that logs alone are not enough.
+        While application log streams tell you <em>what happened</em> during a failure, metrics tell you <em>how healthy the system is over time</em>—tracking
+        traffic spikes, memory leaks, latency degradation, and error rate surges before complete crashes occur.
+    </p>
+    <p>
+        To build a complete observability pipeline, we need to understand the distinct responsibilities of each tool in the telemetry stack:
+    </p>
+    <ul>
+        <li>
+            <strong>Application Exporters (e.g. <code>prometheus_flask_exporter</code>):</strong> Web frameworks like Flask do not natively track time-series history.
+            The exporter middleware measures incoming HTTP request rates, latencies, and response codes, exposing them as formatted text on an HTTP endpoint (typically <code>/metrics</code>).
+        </li>
+        <li>
+            <strong>Node Exporter:</strong> Runs as a lightweight system daemon to extract hardware- and kernel-level metrics from the operating system—including CPU ticks, memory utilization, disk I/O, and network bandwidth.
+        </li>
+        <li>
+            <strong>Prometheus:</strong> The storage and ingestion engine. Prometheus uses a <strong>pull-based architecture</strong>: at configured intervals (e.g., every 5 seconds), it scrapes the HTTP <code>/metrics</code> endpoints of registered targets, stores them in an optimized local Time-Series Database (TSDB), supports PromQL queries for arithmetic and rate calculation, and evaluates alerting rules.
+        </li>
+        <li>
+            <strong>Grafana:</strong> The visualization layer. Grafana does not store metrics itself. Instead, it queries Prometheus as a data source and renders interactive dashboards, time-series charts, single-stat gauges, and heatmaps.
+        </li>
+    </ul>
+
+    <div class="post-note">
+        <p><strong>Architecture Flow:</strong> <code>[Flask App / Node Exporter]</code> &rarr; <em>(Pulls over HTTP /metrics)</em> &rarr; <code>[Prometheus TSDB]</code> &rarr; <em>(PromQL queries)</em> &rarr; <code>[Grafana Dashboard &amp; Alerts]</code></p>
+    </div>
+
+    <h2>2. Installation &amp; Environment Setup</h2>
+    <p>
+        For this walkthrough, we set up Prometheus, Grafana OSS, and Node Exporter directly on a Linux environment using official standalone binaries.
+    </p>
+
+    <h3>1. Installing Prometheus</h3>
+    <pre><code># Download and extract Prometheus
+wget https://github.com/prometheus/prometheus/releases/download/v3.16.0/prometheus-3.16.0.linux-amd64.tar.gz
+tar -xvf prometheus-3.16.0.linux-amd64.tar.gz
+cd prometheus-3.16.0.linux-amd64</code></pre>
+
+    <h3>2. Installing Grafana OSS</h3>
+    <pre><code># Download and extract Grafana OSS
+wget https://dl.grafana.com/grafana/release/13.3.1/grafana_13.3.1_42849527790_linux_amd64.tar.gz
+tar -zxvf grafana_13.3.1_42849527790_linux_amd64.tar.gz
+cd grafana-13.3.1</code></pre>
+
+    <h3>3. Installing Node Exporter</h3>
+    <pre><code># Download and extract Node Exporter
+wget https://github.com/prometheus/node_exporter/releases/download/v1.13.1/node_exporter-1.13.1.linux-amd64.tar.gz
+tar -xvf node_exporter-1.13.1.linux-amd64.tar.gz
+cd node_exporter-1.13.1.linux-amd64</code></pre>
+
+    <h2>3. Phase 1: Host Telemetry with Node Exporter</h2>
+    <p>
+        We begin by monitoring the host operating system. Starting the <code>node_exporter</code> binary binds by default to port <code>:9100</code>:
+    </p>
+    <pre><code>./node_exporter</code></pre>
+
+    <figure class="post-figure">
+        <img src="/static/post8/node_exporter_port.png" alt="Node Exporter landing page on port 9100" loading="lazy">
+        <figcaption>Figure 1 — Node Exporter initialized and serving metrics at <code>http://localhost:9100/metrics</code></figcaption>
+    </figure>
+
+    <p>
+        Next, we instruct Prometheus to scrape this endpoint by configuring <code>prometheus.yml</code>:
+    </p>
+
+    <pre><code>global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']</code></pre>
+
+    <p>
+        Starting Prometheus (<code>./prometheus --config.file=prometheus.yml</code>) and navigating to <code>http://localhost:9090/targets</code> confirms the connection. The target status displays as healthy and <strong>UP</strong>:
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/prometheus_target_health.png" alt="Prometheus Target Health page showing node endpoint UP" loading="lazy">
+        <figcaption>Figure 2 — Prometheus Target Health dashboard verifying active scraping of <code>localhost:9100</code></figcaption>
+    </figure>
+
+    <h3>Querying Host Metrics with PromQL</h3>
+    <p>
+        Prometheus provides a powerful query language, <strong>PromQL</strong>. Beyond viewing raw numbers, we can compute derived statistics. For instance, to calculate the percentage of memory currently in use across our Linux system:
+    </p>
+
+    <pre><code>100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)</code></pre>
+
+    <figure class="post-figure">
+        <img src="/static/post8/prometheus_memory_query.png" alt="Prometheus PromQL graph calculating memory usage percentage" loading="lazy">
+        <figcaption>Figure 3 — Prometheus graph plotting memory utilization percentage over time</figcaption>
+    </figure>
+
+    <h3>Connecting Grafana &amp; Building Host Dashboards</h3>
+    <p>
+        We now launch Grafana by running <code>./bin/grafana server</code> and accessing the web console at <code>http://localhost:3000</code> (default credentials: <code>admin</code> / <code>admin</code>):
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/grafana_welcome_page.png" alt="Grafana Welcome Home Dashboard" loading="lazy">
+        <figcaption>Figure 4 — Grafana OSS initial landing console</figcaption>
+    </figure>
+
+    <p>
+        Under <strong>Connections &gt; Data Sources</strong>, we add Prometheus with the URL <code>http://localhost:9090</code>. In the <strong>Explore</strong> view, we can immediately query system metrics such as <code>node_cpu_seconds_total</code>:
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/grafana_explore_metrics.png" alt="Grafana Explore view querying Prometheus datasource" loading="lazy">
+        <figcaption>Figure 5 — Grafana Explore tab verifying metric ingestion directly from Prometheus</figcaption>
+    </figure>
+
+    <p>
+        Rather than building every gauge manually, the Grafana community maintains pre-built dashboard templates. The industry-standard dashboard for host telemetry is <strong>Node Exporter Full</strong> (Dashboard ID <code>1860</code>):
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/grafana_import_dashboard.png" alt="Grafana Dashboards library page for Node Exporter Full" loading="lazy">
+        <figcaption>Figure 6 — Importing the Node Exporter Full dashboard template from the community repository</figcaption>
+    </figure>
+
+    <p>
+        Importing ID <code>1860</code> and binding it to our Prometheus data source immediately renders a comprehensive operations dashboard:
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/grafana_node_dashboard.png" alt="Grafana Node Exporter Full dashboard displaying active metrics" loading="lazy">
+        <figcaption>Figure 7 — Active host telemetry dashboard: CPU Busy (21.9%), Sys Load (14.5%), RAM Used (25.7%), Root FS, and Network I/O</figcaption>
+    </figure>
+
+    <h2>4. Phase 2: Application Telemetry with Flask</h2>
+    <p>
+        Host metrics tell us if the machine is overloaded, but they cannot tell us if our web service is serving customer requests reliably.
+        To track the <em>Golden Signals</em> (Traffic, Latency, and Errors), we instrument a Python Flask application.
+    </p>
+
+    <p>We install the exporter library:</p>
+    <pre><code>pip install prometheus_flask_exporter</code></pre>
+
+    <p>Next, we write an instrumented application (<code>app.py</code>):</p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/flask_exporter_code.png" alt="Flask application code using prometheus_flask_exporter" loading="lazy">
+        <figcaption>Figure 8 — Python Flask service with PrometheusMetrics middleware and static labeling</figcaption>
+    </figure>
+
+    <pre><code>from flask import Flask
+from prometheus_flask_exporter import PrometheusMetrics
+
+app = Flask(__name__)
+
+# Attach metrics middleware with an application label
+metrics = PrometheusMetrics(app, static_labels={'app_name': 'python_app'})
+
+@app.route('/')
+def index():
+    return "Hello World", 200
+
+if __name__ == '__main__':
+    app.run(
+        debug=True,
+        use_reloader=False,
+        port=8000,
+        host='0.0.0.0'
+    )</code></pre>
+
+    <p>
+        We then add a scrape job for our Python web application in <code>prometheus.yml</code>:
+    </p>
+
+    <pre><code>scrape_configs:
+  - job_name: 'python_app'
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ['localhost:8000']</code></pre>
+
+    <p>
+        With Flask running on port 8000 and Prometheus scraping it every 5 seconds, querying <code>flask_http_request_total</code> in the Prometheus UI visualizes incoming HTTP traffic in real time:
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/prometheus_flask_query.png" alt="Prometheus query graph showing flask_http_request_total" loading="lazy">
+        <figcaption>Figure 9 — Prometheus graph tracking incoming requests partitioned by HTTP method and status code</figcaption>
+    </figure>
+
+    <h2>5. Troubleshooting: The &ldquo;No Data&rdquo; Label Mismatch Trap</h2>
+    <p>
+        A frequent stumbling block when importing community Grafana dashboards is loading a dashboard only to find every panel displays <strong>No data</strong>:
+    </p>
+
+    <figure class="post-figure">
+        <img src="/static/post8/grafana_label_mismatch_nodata.png" alt="Grafana Flask Monitoring dashboard showing No data error" loading="lazy">
+        <figcaption>Figure 10 — The imported dashboard failing with 'No data' across all panels despite active scraping</figcaption>
+    </figure>
+
+    <h3>Root Cause Analysis</h3>
+    <p>
+        Understanding why this happens requires distinguishing between two distinct configuration concepts:
+    </p>
+    <ul>
+        <li>
+            <strong><code>static_configs</code> (Who to scrape):</strong> Defines network targets (e.g., <code>localhost:8000</code>). Prometheus successfully scrapes these targets and marks them UP.
+        </li>
+        <li>
+            <strong><code>static_labels</code> and Dashboard Variables (What to filter):</strong> Pre-built Grafana dashboards use dashboard-level template variables (such as <code>$app_name</code> or <code>$job</code>) in panel queries:
+            <pre><code>flask_http_request_total{app_name="$application_name"}</code></pre>
+        </li>
+    </ul>
+    <p>
+        If the dashboard variable expects <code>flask-monitoring</code>, but your application exporter defines <code>'app_name': 'python_app'</code>, the PromQL query evaluates to an empty result set.
+    </p>
+
+    <div class="post-note">
+        <p><strong>The Fix:</strong> Either update the <code>static_labels</code> key-value pairs in your Python exporter to match what the dashboard template expects, or modify the dashboard variable dropdown in Grafana (under <em>Dashboard Settings &gt; Variables</em>) to query <code>label_values(app_name)</code> dynamically. Once aligned, metrics flow seamlessly into every panel.</p>
+    </div>
+
+    <figure class="post-figure">
+        <img src="/static/post8/grafana_flask_dashboard.png" alt="Working Grafana Flask Monitoring dashboard showing live metrics" loading="lazy">
+        <figcaption>Figure 11 — The resolved dashboard visualizing live traffic: total request volume, HTTP 200 vs 404 ratios, and route latency gauges (145 µs on <code>/</code>, 2.72 ms on <code>/.env</code>)</figcaption>
+    </figure>
+
+    <h2>6. Phase 3: Threshold Alerting with Prometheus Rules</h2>
+    <p>
+        Dashboards are indispensable during debugging, but no engineering team stares at monitoring screens 24/7.
+        Production observability requires <strong>alert-driven detection</strong> that notifies engineers the moment an anomaly or outage occurs.
+    </p>
+
+    <p>
+        We create an alerting rule file, <code>alert_rules.yml</code>, to trigger when our web application stops responding:
+    </p>
+
+    <pre><code>groups:
+  - name: flask_app_alerts
+    rules:
+      - alert: FlaskAppDown
+        expr: up{job="python_app"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Flask application is down"
+          description: "Prometheus cannot scrape {% raw %}{{ $labels.instance }}{% endraw %} for more than 30 seconds."</code></pre>
+
+    <p>We link this rule set inside <code>prometheus.yml</code>:</p>
+
+    <pre><code>global:
+  scrape_interval: 5s
+
+rule_files:
+  - "alert_rules.yml"
+
+scrape_configs:
+  - job_name: 'python_app'
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ['localhost:8000']</code></pre>
+
+    <h3>The Alert Lifecycle in Action</h3>
+    <p>
+        To test the rule, we terminate the Flask application process (<code>Ctrl + C</code>). Prometheus handles the outage across three sequential states:
+    </p>
+    <ol>
+        <li>
+            <strong>Inactive (Green):</strong> The application is up, and <code>up{job="python_app"} == 1</code>.
+        </li>
+        <li>
+            <strong>Pending (Yellow):</strong> The condition <code>up == 0</code> evaluates to true. However, because we configured <code>for: 30s</code>, Prometheus holds the alert in a pending state. This threshold damping prevents alert fatigue from momentary network blips or brief process restarts.
+        </li>
+        <li>
+            <strong>Firing (Red):</strong> Once the application remains unreachable for a full 30 seconds, the alert transitions into <strong>FIRING</strong> state:
+        </li>
+    </ol>
+
+    <figure class="post-figure">
+        <img src="/static/post8/prometheus_firing_alert.png" alt="Prometheus Alerts console showing FlaskAppDown FIRING" loading="lazy">
+        <figcaption>Figure 12 — Prometheus Alert console confirming the <code>FlaskAppDown</code> rule entered FIRING state</figcaption>
+    </figure>
+
+    <p>
+        In enterprise setups, Prometheus forwards firing alerts to <strong>Alertmanager</strong>, which deduplicates notifications, manages silences, and routes dispatches to Slack, Discord, PagerDuty, or custom webhook endpoints.
+    </p>
+
+    <h2>7. Summary &amp; Observability Checklist</h2>
+    <p>
+        Through this hands-on exploration, we established an end-to-end monitoring pipeline:
+    </p>
+    <ul>
+        <li><strong>Infrastructure Visibility:</strong> Node Exporter captures low-level kernel and hardware statistics without touching application code.</li>
+        <li><strong>Service-Level Metrics:</strong> Middleware exporters expose application-specific Golden Signals (throughput, latency, error status codes).</li>
+        <li><strong>Label Consistency:</strong> Dashboard queries depend directly on metric label fidelity; aligning static labels prevents "no data" anomalies.</li>
+        <li><strong>Automated Escalation:</strong> Threshold rules with temporal damping (<code>for: 30s</code>) eliminate false alarms while guaranteeing immediate escalation when critical components fail.</li>
+    </ul>
+
+        </div>
+    </div>
+
+    <footer class="piece-foot">
+        <a href="/" class="piece-foot__back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Back to all writeups</span>
+        </a>
+        <button type="button" class="pill-btn btn-copy-post" data-url="/posts/8">
+            <span>Share writeup</span>
+        </button>
+    </footer>
+    </div>
+    </div>
+</article>
+
+{% endblock %}

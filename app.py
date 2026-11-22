@@ -143,6 +143,17 @@ async def analytics_middleware(request: Request, call_next):
 # Structured post data: (id, title, preview, date, tag, read_time, thumb, featured, category)
 posts_data = [
     (
+        8,
+        "Building Full-Stack Observability with Prometheus & Grafana",
+        "A practical hands-on guide to instrumenting Python web applications, capturing host telemetry with Node Exporter, building Grafana dashboards, and configuring proactive alert rules.",
+        "November 22, 2026",
+        "DevOps & Observability",
+        "8 min read",
+        "/static/post8/grafana_flask_dashboard.png",
+        True,
+        "api",
+    ),
+    (
         7,
         "Master API Key Exposure in Website Builder",
         "Discovered an exposed super-admin API key in client-side requests, enabling full administrative access to user PII, credentials, and site configurations.",
@@ -222,6 +233,7 @@ posts_data = [
 ]
 
 POST_DATES = {
+    8: "2026-11-22",
     7: "2026-03-31",
     6: "2026-02-14",
     1: "2025-11-29",
